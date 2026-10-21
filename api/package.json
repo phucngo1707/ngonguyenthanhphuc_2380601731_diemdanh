@@ -1,7 +1,7 @@
 {
-  "name": "prime-attendance-api",
+  "name": "ngonguyenthanhphuc_2380601731_diemdanh_api",
   "version": "1.0.0",
-  "description": "PRIME Attendance Backend REST API (Node.js, Express, TypeScript, Prisma, MySQL 8)",
+  "description": "Ngo Nguyen Thanh Phuc 2380601731 Attendance Backend REST API (Node.js, Express, TypeScript, Prisma, MySQL 8)",
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",

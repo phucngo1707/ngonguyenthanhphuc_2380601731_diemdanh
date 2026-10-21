@@ -73,20 +73,20 @@ class _SplashScreenState extends State<SplashScreen> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'PRIME ATTENDANCE',
+              'NGÔ NGUYỄN THANH PHÚC',
               style: TextStyle(
                 color: Colors.white,
-                fontSize: 24,
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
-                letterSpacing: 2,
+                letterSpacing: 1.5,
               ),
             ),
             const SizedBox(height: 8),
             const Text(
-              'Hệ thống Điểm danh Sinh viên Thông minh',
+              'Hệ thống Điểm danh Sinh viên Thông minh - 2380601731',
               style: TextStyle(
                 color: Colors.white70,
-                fontSize: 14,
+                fontSize: 13,
               ),
             ),
             const SizedBox(height: 40),

@@ -205,18 +205,18 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'PRIME ATTENDANCE',
+                      'NGÔ NGUYỄN THANH PHÚC',
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1A237E),
-                        letterSpacing: 1.5,
+                        letterSpacing: 1.2,
                       ),
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'Đăng nhập hệ thống điểm danh',
-                      style: TextStyle(fontSize: 14, color: Colors.grey),
+                      'Hệ thống Điểm danh Thông minh - 2380601731',
+                      style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500),
                     ),
                   ],
                 ),

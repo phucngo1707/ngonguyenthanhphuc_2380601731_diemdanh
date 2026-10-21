@@ -18,7 +18,7 @@ class PrimeAttendanceApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
       ],
       child: MaterialApp(
-        title: 'PRIME Student Attendance',
+        title: 'Ngô Nguyễn Thanh Phúc - 2380601731 Điểm Danh',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,

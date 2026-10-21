@@ -4,7 +4,7 @@ async function startTunnel() {
   try {
     const tunnel = await localtunnel({
       port: 5000,
-      subdomain: 'prime-attendance-2380601731',
+      subdomain: 'ngonguyenthanhphuc-2380601731',
     });
     console.log('PUBLIC_TUNNEL_ONLINE:', tunnel.url);
 
