@@ -77,9 +77,9 @@ export const checkInDynamicQr = async (req: Request, res: Response): Promise<voi
     // 5. Consume nonce immediately so it cannot be replayed
     consumeNonce(nonce, expiresAt);
 
-    // 6. Check-in status (first 10 mins = PRESENT, after = LATE)
+    // 6. Check-in status (first 5 mins = PRESENT, after 5 mins = LATE)
     const elapsedMinutes = (now.getTime() - session.startTime.getTime()) / (1000 * 60);
-    const status = elapsedMinutes > 10 ? AttendanceStatus.LATE : AttendanceStatus.PRESENT;
+    const status = elapsedMinutes > 5 ? AttendanceStatus.LATE : AttendanceStatus.PRESENT;
 
     const record = await prisma.attendanceRecord.create({
       data: {
@@ -131,6 +131,25 @@ export const getMyAttendanceHistory = async (req: Request, res: Response): Promi
 export const getSessionAttendance = async (req: Request, res: Response): Promise<void> => {
   try {
     const { sessionId } = req.params;
+
+    const session = await prisma.attendanceSession.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!session) {
+      sendError(res, 'Không tìm thấy phiên điểm danh', 404);
+      return;
+    }
+
+    if (req.user?.role === UserRole.STUDENT) {
+      sendError(res, 'Sinh viên không có quyền xem danh sách điểm danh toàn phiên', 403);
+      return;
+    }
+
+    if (req.user?.role === UserRole.TEACHER && session.teacherId !== req.user.id) {
+      sendError(res, 'Bạn chỉ được xem danh sách điểm danh của lớp mình phụ trách', 403);
+      return;
+    }
 
     const records = await prisma.attendanceRecord.findMany({
       where: { sessionId },

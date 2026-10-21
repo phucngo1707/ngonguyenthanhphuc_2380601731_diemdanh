@@ -172,6 +172,17 @@ export const enrollStudent = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
+    const classData = await prisma.class.findUnique({ where: { id: classId } });
+    if (!classData) {
+      sendError(res, 'Không tìm thấy lớp học phần', 404);
+      return;
+    }
+
+    if (req.user?.role === UserRole.TEACHER && classData.teacherId !== req.user.id) {
+      sendError(res, 'Bạn chỉ có quyền quản lý danh sách sinh viên của lớp mình phụ trách', 403);
+      return;
+    }
+
     const enrollment = await prisma.enrollment.create({
       data: {
         studentId,
@@ -191,6 +202,17 @@ export const enrollStudent = async (req: Request, res: Response): Promise<void> 
 export const removeStudentFromClass = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id: classId, studentId } = req.params;
+
+    const classData = await prisma.class.findUnique({ where: { id: classId } });
+    if (!classData) {
+      sendError(res, 'Không tìm thấy lớp học phần', 404);
+      return;
+    }
+
+    if (req.user?.role === UserRole.TEACHER && classData.teacherId !== req.user.id) {
+      sendError(res, 'Bạn chỉ có quyền xóa sinh viên khỏi lớp mình phụ trách', 403);
+      return;
+    }
 
     await prisma.enrollment.delete({
       where: {

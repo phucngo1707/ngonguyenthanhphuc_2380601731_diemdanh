@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { prisma } from '../config/prisma';
 import { sendSuccess, sendError } from '../utils/response';
-import { LeaveStatus, UserRole } from '@prisma/client';
+import { LeaveStatus, UserRole, AttendanceStatus } from '@prisma/client';
 
 export const listLeaveRequests = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -50,6 +50,16 @@ export const getLeaveRequestById = async (req: Request, res: Response): Promise<
       return;
     }
 
+    if (req.user?.role === UserRole.STUDENT && request.studentId !== req.user.id) {
+      sendError(res, 'Bạn không có quyền xem đơn xin nghỉ phép của sinh viên khác', 403);
+      return;
+    }
+
+    if (req.user?.role === UserRole.TEACHER && request.class.teacherId !== req.user.id) {
+      sendError(res, 'Bạn chỉ có quyền xem đơn xin nghỉ phép của lớp mình phụ trách', 403);
+      return;
+    }
+
     sendSuccess(res, 'Lấy chi tiết đơn nghỉ phép thành công', request);
   } catch (error: any) {
     sendError(res, 'Lỗi khi lấy thông tin đơn nghỉ phép', 500);
@@ -85,6 +95,28 @@ export const createLeaveRequest = async (req: Request, res: Response): Promise<v
       return;
     }
 
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    const existingLeave = await prisma.leaveRequest.findFirst({
+      where: {
+        studentId,
+        classId,
+        status: { in: [LeaveStatus.PENDING, LeaveStatus.APPROVED] },
+        startDate: { lte: end },
+        endDate: { gte: start },
+      },
+    });
+
+    if (existingLeave) {
+      sendError(
+        res,
+        'Bạn đã có đơn xin nghỉ phép đang chờ duyệt hoặc đã duyệt trong khoảng thời gian này',
+        409
+      );
+      return;
+    }
+
     const file = req.file;
     const attachmentUrl = file ? file.path.replace(/\\/g, '/') : null;
 
@@ -95,8 +127,8 @@ export const createLeaveRequest = async (req: Request, res: Response): Promise<v
         reason,
         attachmentUrl,
         ocrText: ocrText || null,
-        startDate: new Date(startDate),
-        endDate: new Date(endDate),
+        startDate: start,
+        endDate: end,
         status: LeaveStatus.PENDING,
       },
       include: {
@@ -186,7 +218,38 @@ export const reviewLeaveRequest = async (req: Request, res: Response): Promise<v
       },
     });
 
-    sendSuccess(res, `Đã ${status === LeaveStatus.APPROVED ? 'chấp thuận' : 'từ chối'} đơn xin nghỉ phép`, updated);
+    // If approved, update existing attendance records within the leave range to EXCUSED
+    if (status === LeaveStatus.APPROVED) {
+      const matchingSessions = await prisma.attendanceSession.findMany({
+        where: {
+          classId: request.classId,
+          startTime: { gte: request.startDate, lte: request.endDate },
+        },
+        select: { id: true },
+      });
+
+      if (matchingSessions.length > 0) {
+        const sessionIds = matchingSessions.map((s) => s.id);
+        await prisma.attendanceRecord.updateMany({
+          where: {
+            sessionId: { in: sessionIds },
+            studentId: request.studentId,
+          },
+          data: {
+            status: AttendanceStatus.EXCUSED,
+            modifiedByTeacherId: req.user?.id,
+            modifiedReason: `Đơn xin nghỉ phép đã được phê duyệt: ${request.reason}`,
+            modifiedAt: new Date(),
+          },
+        });
+      }
+    }
+
+    sendSuccess(
+      res,
+      `Đã ${status === LeaveStatus.APPROVED ? 'chấp thuận' : 'từ chối'} đơn xin nghỉ phép`,
+      updated
+    );
   } catch (error: any) {
     sendError(res, 'Lỗi khi phê duyệt đơn xin nghỉ phép', 500);
   }

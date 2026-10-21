@@ -46,6 +46,12 @@ export const listUsers = async (req: Request, res: Response): Promise<void> => {
 export const getUserById = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+
+    if (req.user?.role === UserRole.STUDENT && req.user.id !== id) {
+      sendError(res, 'Sinh viên không được phép xem hồ sơ của người khác', 403);
+      return;
+    }
+
     const user = await prisma.user.findUnique({
       where: { id },
       select: {
@@ -159,6 +165,40 @@ export const deleteUser = async (req: Request, res: Response): Promise<void> => 
     const { id } = req.params;
     if (req.user?.id === id) {
       sendError(res, 'Không thể tự xóa tài khoản của chính mình', 400);
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            enrollments: true,
+            attendanceRecords: true,
+            taughtClasses: true,
+            leaveRequests: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      sendError(res, 'Không tìm thấy người dùng', 404);
+      return;
+    }
+
+    if (
+      user._count.enrollments > 0 ||
+      user._count.attendanceRecords > 0 ||
+      user._count.taughtClasses > 0 ||
+      user._count.leaveRequests > 0
+    ) {
+      // Soft-deactivate to preserve historical attendance data
+      await prisma.user.update({
+        where: { id },
+        data: { isActive: false },
+      });
+      sendSuccess(res, 'Tài khoản có dữ liệu lịch sử hoạt động nên đã được khóa / vô hiệu hóa an toàn');
       return;
     }
 

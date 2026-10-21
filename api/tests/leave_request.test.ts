@@ -32,7 +32,16 @@ describe('Leave Requests & Review Workflow Tests', () => {
     teacherToken = tOtp.body.data.token;
 
     const classData = await prisma.class.findFirst();
-    if (classData) classId = classData.id;
+    if (classData) {
+      classId = classData.id;
+      // Clean up previous test requests for this student in this class
+      await prisma.leaveRequest.deleteMany({
+        where: {
+          studentId: sOtp.body.data.user.id,
+          classId: classData.id,
+        },
+      });
+    }
   });
 
   it('POST /api/leave-requests - Student creates a new leave request', async () => {

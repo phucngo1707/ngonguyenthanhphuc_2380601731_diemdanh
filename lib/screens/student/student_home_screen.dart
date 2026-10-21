@@ -27,6 +27,7 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> with SingleTicker
   bool _isLoadingClasses = true;
   bool _isLoadingHistory = true;
   bool _isLoadingLeaves = true;
+  bool _isScannerOpen = false;
 
   @override
   void initState() {
@@ -113,10 +114,14 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> with SingleTicker
   }
 
   void _openQrScanner() {
+    if (_isScannerOpen) return;
+    _isScannerOpen = true;
+
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const QrScannerScreen()),
     ).then((result) {
+      _isScannerOpen = false;
       if (result == true) {
         _fetchHistory();
       }
