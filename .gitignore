@@ -1,0 +1,44 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets & Environment
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+
+# Node / API
+node_modules/
+dist/
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Flutter / Dart
+mobile/.dart_tool/
+mobile/.packages
+mobile/build/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/android/.gradle
+mobile/android/local.properties
+mobile/android/app/release/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/Flutter.framework
+mobile/ios/Flutter/Flutter.podspec
+mobile/ios/Pods/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.sublime-project
+*.sublime-workspace
+
+# Uploads & Scratch
+api/uploads/*
+!api/uploads/.gitkeep
