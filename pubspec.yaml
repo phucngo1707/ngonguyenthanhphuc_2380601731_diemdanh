@@ -1,0 +1,37 @@
+name: appdiemdanh
+description: "PRIME Student Attendance App - Flutter and Web API"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.4
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # Networking & Storage
+  http: ^1.2.2
+  shared_preferences: ^2.3.2
+  provider: ^6.1.2
+  intl: ^0.19.0
+
+  # QR Code: Teacher display & Student camera scanning
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^5.2.3
+
+  # Sensors & Hardware (Features D, E, F)
+  local_auth: ^2.3.0
+  sensors_plus: ^6.1.1
+  google_mlkit_text_recognition: ^0.13.0
+  image_picker: ^1.1.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true

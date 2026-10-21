@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 import { config } from '../config/env';
 
-// In-memory or temporary cache for used nonces to prevent replay attacks
+// Memory cache for consumed nonces to prevent replay attacks
 const usedNonces = new Map<string, number>();
 
 // Clean expired nonces every 60 seconds
@@ -15,17 +15,6 @@ const cleanupInterval = setInterval(() => {
 }, 60000);
 if (cleanupInterval.unref) cleanupInterval.unref();
 
-export const generateSecureOtp = (): string => {
-  return crypto.randomInt(100000, 999999).toString();
-};
-
-export const hashOtp = (otp: string, email: string): string => {
-  return crypto
-    .createHmac('sha256', config.jwt.accessSecret)
-    .update(`${email}:${otp}`)
-    .digest('hex');
-};
-
 export const generateSessionToken = (): string => {
   return crypto.randomBytes(32).toString('hex');
 };
@@ -34,8 +23,8 @@ export interface QrTokenPayload {
   sessionId: string;
   teacherId: string;
   nonce: string;
-  timestamp: number; // millisecond timestamp
-  expiresAt: number; // millisecond timestamp
+  timestamp: number;
+  expiresAt: number;
 }
 
 export interface SignedQrData {
@@ -45,7 +34,7 @@ export interface SignedQrData {
 }
 
 /**
- * Generates an HMAC-SHA256 signed QR dynamic payload with 10s expiration
+ * Generate HMAC-SHA256 signed QR dynamic payload with 10s expiration
  */
 export const generateDynamicQrToken = (sessionId: string, teacherId: string): SignedQrData => {
   const now = Date.now();
@@ -77,10 +66,7 @@ export const generateDynamicQrToken = (sessionId: string, teacherId: string): Si
 };
 
 /**
- * Verifies the signed QR dynamic token:
- * 1. Checks HMAC signature integrity
- * 2. Checks time window (must not be older than 10s + 3s clock drift allowance)
- * 3. Checks if nonce has been used already (Anti-Replay Attack)
+ * Verifies signed dynamic QR token
  */
 export const verifyDynamicQrToken = (
   rawToken: string
@@ -110,20 +96,19 @@ export const verifyDynamicQrToken = (
     const payload: QrTokenPayload = JSON.parse(payloadString);
     const now = Date.now();
 
-    // Check expiration with a small 3-second grace period for network jitter
+    // 10s expiration window + 3s network grace period
     const gracePeriodMs = 3000;
     if (now > payload.expiresAt + gracePeriodMs) {
-      return { isValid: false, error: 'Mã QR đã hết hạn (chỉ có hiệu lực trong 10 giây). Vui lòng quét mã mới trên màn hình giảng viên' };
+      return { isValid: false, error: 'Mã QR đã hết hạn (chỉ có hiệu lực trong 10 giây). Vui lòng quét mã mới' };
     }
 
-    // Check if timestamp is suspiciously in the future (> 5 seconds ahead)
     if (payload.timestamp > now + 5000) {
-      return { isValid: false, error: 'Thời gian trên thiết bị không đồng bộ với máy chủ' };
+      return { isValid: false, error: 'Thời gian thiết bị không đồng bộ với máy chủ' };
     }
 
-    // Check replay attack via nonce
+    // Anti-replay via nonce
     if (usedNonces.has(payload.nonce)) {
-      return { isValid: false, error: 'Mã QR này đã được sử dụng. Mỗi mã QR chỉ được quét một lần duy nhất' };
+      return { isValid: false, error: 'Mã QR này đã được quét rồi. Mỗi mã chỉ dùng được 1 lần' };
     }
 
     return { isValid: true, payload };
@@ -132,9 +117,6 @@ export const verifyDynamicQrToken = (
   }
 };
 
-/**
- * Mark a nonce as consumed so it cannot be used again
- */
 export const consumeNonce = (nonce: string, expiresAt: number): void => {
   usedNonces.set(nonce, expiresAt);
 };

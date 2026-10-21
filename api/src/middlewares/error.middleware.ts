@@ -8,12 +8,10 @@ export const errorHandler = (
   res: Response,
   next: NextFunction
 ): void => {
-  console.error('[Error Middleware]:', err);
+  console.error('[API Error]:', err);
 
   const statusCode = err.statusCode || 500;
-  const message = err.message || 'Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau.';
-
-  // Never return stack trace in production
+  const message = err.message || 'Đã xảy ra lỗi trên hệ thống máy chủ';
   const errors = config.env === 'development' ? err.stack : undefined;
 
   sendError(res, message, statusCode, errors);

@@ -5,40 +5,29 @@ import { LeaveStatus, UserRole } from '@prisma/client';
 
 export const listLeaveRequests = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { classSectionId, status } = req.query;
+    const { classId, status } = req.query;
     const where: any = {};
 
-    if (classSectionId) where.classSectionId = classSectionId as string;
+    if (classId) where.classId = classId as string;
     if (status) where.status = status as LeaveStatus;
 
-    // Student only sees their own leave requests
     if (req.user?.role === UserRole.STUDENT) {
       where.studentId = req.user.id;
+    } else if (req.user?.role === UserRole.TEACHER) {
+      where.class = { teacherId: req.user.id };
     }
 
-    // Teacher only sees leave requests for sections they teach
-    if (req.user?.role === UserRole.TEACHER) {
-      where.classSection = { teacherId: req.user.id };
-    }
-
-    const leaveRequests = await prisma.leaveRequest.findMany({
+    const requests = await prisma.leaveRequest.findMany({
       where,
       orderBy: { createdAt: 'desc' },
       include: {
-        student: {
-          select: { id: true, fullName: true, studentCode: true, email: true, avatarUrl: true },
-        },
-        classSection: {
-          select: { id: true, code: true, name: true, subject: { select: { name: true } } },
-        },
-        attachments: true,
-        reviewedBy: {
-          select: { id: true, fullName: true, email: true },
-        },
+        student: { select: { id: true, fullName: true, studentCode: true, email: true } },
+        class: { select: { id: true, code: true, name: true, subjectName: true } },
+        reviewedBy: { select: { id: true, fullName: true } },
       },
     });
 
-    sendSuccess(res, 'Lấy danh sách đơn xin nghỉ phép thành công', leaveRequests);
+    sendSuccess(res, 'Lấy danh sách đơn xin nghỉ phép thành công', requests);
   } catch (error: any) {
     sendError(res, 'Lỗi khi lấy danh sách đơn nghỉ phép', 500);
   }
@@ -50,33 +39,14 @@ export const getLeaveRequestById = async (req: Request, res: Response): Promise<
     const request = await prisma.leaveRequest.findUnique({
       where: { id },
       include: {
-        student: {
-          select: { id: true, fullName: true, studentCode: true, email: true },
-        },
-        classSection: {
-          include: { subject: true, teacher: { select: { id: true, fullName: true } } },
-        },
-        attachments: true,
+        student: { select: { id: true, fullName: true, studentCode: true, email: true } },
+        class: { include: { teacher: { select: { id: true, fullName: true } } } },
         reviewedBy: { select: { id: true, fullName: true } },
       },
     });
 
     if (!request) {
       sendError(res, 'Không tìm thấy đơn xin nghỉ phép', 404);
-      return;
-    }
-
-    // Security check
-    if (req.user?.role === UserRole.STUDENT && request.studentId !== req.user.id) {
-      sendError(res, 'Bạn không có quyền xem đơn của sinh viên khác', 403);
-      return;
-    }
-
-    if (
-      req.user?.role === UserRole.TEACHER &&
-      request.classSection.teacherId !== req.user.id
-    ) {
-      sendError(res, 'Bạn không thể duyệt đơn của lớp do giảng viên khác phụ trách', 403);
       return;
     }
 
@@ -94,63 +64,48 @@ export const createLeaveRequest = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    const { classSectionId, sessionId, reason, startDate, endDate, ocrText } = req.body;
+    const { classId, reason, startDate, endDate, ocrText } = req.body;
 
-    if (!classSectionId || !reason || !startDate || !endDate) {
-      sendError(res, 'Vui lòng cung cấp lớp học phần, lý do và thời gian xin nghỉ', 400);
+    if (!classId || !reason || !startDate || !endDate) {
+      sendError(res, 'Vui lòng cung cấp mã lớp, lý do và thời gian xin nghỉ', 400);
       return;
     }
 
-    // Check enrollment
-    const isEnrolled = await prisma.enrollment.findUnique({
+    const enrollment = await prisma.enrollment.findUnique({
       where: {
-        unique_student_section: {
+        unique_student_class: {
           studentId,
-          classSectionId,
+          classId,
         },
       },
     });
 
-    if (!isEnrolled) {
-      sendError(res, 'Bạn không có tên trong danh sách lớp học phần này', 403);
+    if (!enrollment) {
+      sendError(res, 'Bạn không thuộc danh sách lớp học phần này', 403);
       return;
     }
 
-    const newRequest = await prisma.leaveRequest.create({
+    const file = req.file;
+    const attachmentUrl = file ? file.path.replace(/\\/g, '/') : null;
+
+    const request = await prisma.leaveRequest.create({
       data: {
         studentId,
-        classSectionId,
-        sessionId: sessionId || null,
+        classId,
         reason,
+        attachmentUrl,
+        ocrText: ocrText || null,
         startDate: new Date(startDate),
         endDate: new Date(endDate),
         status: LeaveStatus.PENDING,
       },
+      include: {
+        class: { select: { code: true, name: true } },
+      },
     });
 
-    // Handle uploaded file if present
-    const file = req.file;
-    if (file) {
-      await prisma.leaveAttachment.create({
-        data: {
-          leaveRequestId: newRequest.id,
-          fileName: file.originalname,
-          filePath: file.path.replace(/\\/g, '/'),
-          fileSize: file.size,
-          mimeType: file.mimetype,
-          ocrText: ocrText || null,
-        },
-      });
-    }
-
-    const created = await prisma.leaveRequest.findUnique({
-      where: { id: newRequest.id },
-      include: { attachments: true, classSection: true },
-    });
-
-    sendSuccess(res, 'Nộp đơn xin nghỉ phép thành công. Đang chờ giảng viên phê duyệt.', created, 201);
+    sendSuccess(res, 'Gửi đơn xin nghỉ phép thành công', request, 201);
   } catch (error: any) {
-    console.error('Create leave request error:', error);
     sendError(res, 'Lỗi khi tạo đơn xin nghỉ phép', 500);
   }
 };
@@ -166,7 +121,6 @@ export const updateLeaveRequest = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    // Student can only edit or cancel if PENDING
     if (req.user?.role === UserRole.STUDENT) {
       if (existing.studentId !== req.user.id) {
         sendError(res, 'Bạn không có quyền sửa đơn của sinh viên khác', 403);
@@ -186,7 +140,6 @@ export const updateLeaveRequest = async (req: Request, res: Response): Promise<v
         ...(endDate && { endDate: new Date(endDate) }),
         ...(status && { status }),
       },
-      include: { attachments: true },
     });
 
     sendSuccess(res, 'Cập nhật đơn xin nghỉ phép thành công', updated);
@@ -207,7 +160,7 @@ export const reviewLeaveRequest = async (req: Request, res: Response): Promise<v
 
     const request = await prisma.leaveRequest.findUnique({
       where: { id },
-      include: { classSection: true },
+      include: { class: true },
     });
 
     if (!request) {
@@ -215,10 +168,7 @@ export const reviewLeaveRequest = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    if (
-      req.user?.role === UserRole.TEACHER &&
-      request.classSection.teacherId !== req.user.id
-    ) {
+    if (req.user?.role === UserRole.TEACHER && request.class.teacherId !== req.user.id) {
       sendError(res, 'Bạn chỉ có quyền phê duyệt đơn của lớp mình phụ trách', 403);
       return;
     }
@@ -232,12 +182,11 @@ export const reviewLeaveRequest = async (req: Request, res: Response): Promise<v
         reviewedAt: new Date(),
       },
       include: {
-        student: { select: { id: true, fullName: true, email: true } },
-        reviewedBy: { select: { id: true, fullName: true } },
+        student: { select: { fullName: true, studentCode: true } },
       },
     });
 
-    sendSuccess(res, `Đã ${status === LeaveStatus.APPROVED ? 'chấp thuận' : 'từ chối'} đơn xin nghỉ phép thành công`, updated);
+    sendSuccess(res, `Đã ${status === LeaveStatus.APPROVED ? 'chấp thuận' : 'từ chối'} đơn xin nghỉ phép`, updated);
   } catch (error: any) {
     sendError(res, 'Lỗi khi phê duyệt đơn xin nghỉ phép', 500);
   }

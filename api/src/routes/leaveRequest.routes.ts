@@ -7,7 +7,7 @@ import {
   reviewLeaveRequest,
 } from '../controllers/leaveRequest.controller';
 import { authenticateJwt } from '../middlewares/auth.middleware';
-import { requireTeacher, requireStudent } from '../middlewares/role.middleware';
+import { requireStudent, requireTeacher } from '../middlewares/role.middleware';
 import { uploadAttachment } from '../middlewares/upload.middleware';
 
 const router = Router();

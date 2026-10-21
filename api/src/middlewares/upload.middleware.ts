@@ -3,7 +3,6 @@ import path from 'path';
 import fs from 'fs';
 import { config } from '../config/env';
 
-// Ensure upload directory exists
 const uploadDir = path.resolve(process.cwd(), config.upload.dir);
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
@@ -21,18 +20,16 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf'];
-  if (allowedTypes.includes(file.mimetype)) {
+  const allowed = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf'];
+  if (allowed.includes(file.mimetype)) {
     cb(null, true);
   } else {
-    cb(new Error('Chỉ chấp nhận các tệp định dạng JPG, PNG, WEBP hoặc PDF'));
+    cb(new Error('Chỉ chấp nhận các tệp ảnh JPG, PNG, WEBP hoặc tài liệu PDF'));
   }
 };
 
 export const uploadAttachment = multer({
   storage,
-  limits: {
-    fileSize: config.upload.maxSizeMb * 1024 * 1024,
-  },
+  limits: { fileSize: config.upload.maxSizeMb * 1024 * 1024 },
   fileFilter,
 });

@@ -6,8 +6,6 @@ import { UserRole } from '@prisma/client';
 
 export const listUsers = async (req: Request, res: Response): Promise<void> => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
     const role = req.query.role as UserRole | undefined;
     const search = req.query.search as string | undefined;
 
@@ -19,38 +17,27 @@ export const listUsers = async (req: Request, res: Response): Promise<void> => {
         { email: { contains: search } },
         { username: { contains: search } },
         { studentCode: { contains: search } },
-        { teacherCode: { contains: search } },
       ];
     }
 
-    const [total, users] = await Promise.all([
-      prisma.user.count({ where }),
-      prisma.user.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-        select: {
-          id: true,
-          username: true,
-          email: true,
-          fullName: true,
-          role: true,
-          phoneNumber: true,
-          studentCode: true,
-          teacherCode: true,
-          isActive: true,
-          createdAt: true,
-        },
-      }),
-    ]);
-
-    sendSuccess(res, 'Lấy danh sách người dùng thành công', users, 200, {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
+    const users = await prisma.user.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+        fullName: true,
+        role: true,
+        phoneNumber: true,
+        studentCode: true,
+        teacherCode: true,
+        isActive: true,
+        createdAt: true,
+      },
     });
+
+    sendSuccess(res, 'Lấy danh sách người dùng thành công', users);
   } catch (error: any) {
     sendError(res, 'Lỗi khi lấy danh sách người dùng', 500);
   }
@@ -71,7 +58,6 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
         studentCode: true,
         teacherCode: true,
         isActive: true,
-        createdAt: true,
       },
     });
 
@@ -80,7 +66,7 @@ export const getUserById = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    sendSuccess(res, 'Lấy chi tiết người dùng thành công', user);
+    sendSuccess(res, 'Lấy thông tin người dùng thành công', user);
   } catch (error: any) {
     sendError(res, 'Lỗi khi lấy thông tin người dùng', 500);
   }
@@ -92,16 +78,16 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
       req.body;
 
     if (!username || !email || !password || !fullName || !role) {
-      sendError(res, 'Vui lòng điền đầy đủ các thông tin bắt buộc', 400);
+      sendError(res, 'Vui lòng cung cấp đầy đủ thông tin bắt buộc', 400);
       return;
     }
 
-    const existingUser = await prisma.user.findFirst({
+    const existing = await prisma.user.findFirst({
       where: { OR: [{ username }, { email }] },
     });
 
-    if (existingUser) {
-      sendError(res, 'Tên đăng nhập hoặc email đã tồn tại trong hệ thống', 400);
+    if (existing) {
+      sendError(res, 'Tên đăng nhập hoặc email đã tồn tại', 400);
       return;
     }
 
@@ -125,16 +111,14 @@ export const createUser = async (req: Request, res: Response): Promise<void> => 
         email: true,
         fullName: true,
         role: true,
-        phoneNumber: true,
         studentCode: true,
         teacherCode: true,
-        createdAt: true,
       },
     });
 
-    sendSuccess(res, 'Tạo người dùng mới thành công', newUser, 201);
+    sendSuccess(res, 'Tạo tài khoản người dùng thành công', newUser, 201);
   } catch (error: any) {
-    sendError(res, 'Lỗi khi tạo người dùng: ' + error.message, 500);
+    sendError(res, 'Lỗi khi tạo người dùng', 500);
   }
 };
 
@@ -143,32 +127,28 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
     const { id } = req.params;
     const { fullName, phoneNumber, studentCode, teacherCode, isActive, password } = req.body;
 
-    const updateData: any = {};
-    if (fullName !== undefined) updateData.fullName = fullName;
-    if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
-    if (studentCode !== undefined) updateData.studentCode = studentCode;
-    if (teacherCode !== undefined) updateData.teacherCode = teacherCode;
-    if (isActive !== undefined) updateData.isActive = isActive;
-    if (password) updateData.passwordHash = await argon2.hash(password);
+    const data: any = {};
+    if (fullName !== undefined) data.fullName = fullName;
+    if (phoneNumber !== undefined) data.phoneNumber = phoneNumber;
+    if (studentCode !== undefined) data.studentCode = studentCode;
+    if (teacherCode !== undefined) data.teacherCode = teacherCode;
+    if (isActive !== undefined) data.isActive = isActive;
+    if (password) data.passwordHash = await argon2.hash(password);
 
-    const updatedUser = await prisma.user.update({
+    const updated = await prisma.user.update({
       where: { id },
-      data: updateData,
+      data,
       select: {
         id: true,
         username: true,
         email: true,
         fullName: true,
         role: true,
-        phoneNumber: true,
-        studentCode: true,
-        teacherCode: true,
         isActive: true,
-        updatedAt: true,
       },
     });
 
-    sendSuccess(res, 'Cập nhật thông tin người dùng thành công', updatedUser);
+    sendSuccess(res, 'Cập nhật tài khoản thành công', updated);
   } catch (error: any) {
     sendError(res, 'Lỗi khi cập nhật người dùng', 500);
   }
@@ -177,15 +157,14 @@ export const updateUser = async (req: Request, res: Response): Promise<void> => 
 export const deleteUser = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
-    // Don't allow deleting own account
     if (req.user?.id === id) {
       sendError(res, 'Không thể tự xóa tài khoản của chính mình', 400);
       return;
     }
 
     await prisma.user.delete({ where: { id } });
-    sendSuccess(res, 'Đã xóa người dùng thành công');
+    sendSuccess(res, 'Xóa người dùng thành công');
   } catch (error: any) {
-    sendError(res, 'Không thể xóa người dùng này do có dữ liệu liên quan. Vui lòng chuyển trạng thái sang Không hoạt động.', 400);
+    sendError(res, 'Không thể xóa người dùng có ràng buộc dữ liệu', 400);
   }
 };

@@ -1,44 +1,58 @@
-# OS
-.DS_Store
-Thumbs.db
-
-# Secrets & Environment
-.env
-.env.local
-.env.*.local
-*.pem
-*.key
-
-# Node / API
-node_modules/
-dist/
-coverage/
+# Miscellaneous
+*.class
 *.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
 
-# Flutter / Dart
-mobile/.dart_tool/
-mobile/.packages
-mobile/build/
-mobile/.flutter-plugins
-mobile/.flutter-plugins-dependencies
-mobile/android/.gradle
-mobile/android/local.properties
-mobile/android/app/release/
-mobile/ios/.symlinks/
-mobile/ios/Flutter/Flutter.framework
-mobile/ios/Flutter/Flutter.podspec
-mobile/ios/Pods/
-
-# IDE
-.idea/
-.vscode/
+# IntelliJ related
 *.iml
-*.sublime-project
-*.sublime-workspace
+*.ipr
+*.iws
+.idea/
 
-# Uploads & Scratch
-api/uploads/*
-!api/uploads/.gitkeep
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Widget Preview related
+.widget_preview/
+
+# Node & API Backend
+api/.env
+api/.env.*
+!api/.env.example
+api/node_modules/
+api/dist/
+api/uploads/
+*.env
+*.env.local

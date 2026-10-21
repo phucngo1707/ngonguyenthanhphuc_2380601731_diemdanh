@@ -13,9 +13,8 @@ const router = Router();
 
 router.use(authenticateJwt);
 
-// Admin-only user management
 router.get('/', requireAdmin, listUsers);
-router.get('/:id', requireAdmin, getUserById);
+router.get('/:id', getUserById);
 router.post('/', requireAdmin, createUser);
 router.put('/:id', requireAdmin, updateUser);
 router.delete('/:id', requireAdmin, deleteUser);
