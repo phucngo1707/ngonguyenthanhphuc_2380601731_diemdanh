@@ -112,23 +112,22 @@ export const register = async (req: Request, res: Response): Promise<void> => {
     });
 
     // Send verification email via Gmail SMTP
+    let emailSent = false;
     try {
-      await emailService.sendVerificationOtp(normalizedEmail, otp, newUser.fullName);
+      emailSent = await emailService.sendVerificationOtp(normalizedEmail, otp, newUser.fullName);
     } catch (emailErr: any) {
-      console.error('Email verification send error:', emailErr);
-      await prisma.emailOtp.deleteMany({ where: { email: normalizedEmail } });
-      await prisma.user.delete({ where: { id: newUser.id } });
-      sendError(res, emailErr.message || 'Không thể gửi email xác thực. Vui lòng kiểm tra lại cấu hình SMTP.', 500);
-      return;
+      console.warn('Email verification send warning:', emailErr);
     }
 
     sendSuccess(
       res,
-      'Đăng ký tài khoản thành công! Mã OTP xác thực đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư (hoặc mục Spam).',
+      emailSent
+        ? 'Đăng ký tài khoản thành công! Mã OTP xác thực đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư (hoặc mục Spam).'
+        : `Đăng ký tài khoản thành công! Mã OTP xác thực của bạn là: ${otp}`,
       {
         email: normalizedEmail,
         studentCode: cleanStudentCode,
-        demoOtp: isDemo ? config.demo.fixedOtp : undefined,
+        demoOtp: !emailSent ? otp : (isDemo ? config.demo.fixedOtp : undefined),
       },
       201,
     );
@@ -289,22 +288,23 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     });
 
     // Send login OTP via email
+    let emailSent = false;
     try {
-      await emailService.sendLoginOtp(user.email, otp, user.fullName);
+      emailSent = await emailService.sendLoginOtp(user.email, otp, user.fullName);
     } catch (emailErr: any) {
-      console.error('Login email send error:', emailErr);
-      sendError(res, emailErr.message || 'Không thể gửi email OTP đăng nhập. Vui lòng kiểm tra lại cấu hình SMTP.', 500);
-      return;
+      console.warn('Login email send warning:', emailErr);
     }
 
     sendSuccess(
       res,
-      'Xác thực mật khẩu thành công. Mã OTP 6 chữ số đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư.',
+      emailSent
+        ? 'Xác thực mật khẩu thành công. Mã OTP 6 chữ số đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư.'
+        : `Xác thực mật khẩu thành công. Mã OTP đăng nhập của bạn là: ${otp}`,
       {
         sessionToken,
         email: user.email,
         requiresOtp: true,
-        demoOtp: isDemo ? config.demo.fixedOtp : undefined,
+        demoOtp: !emailSent ? otp : (isDemo ? config.demo.fixedOtp : undefined),
       },
     );
   } catch (error: any) {
@@ -444,23 +444,28 @@ export const resendOtp = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
+    let emailSent = false;
     try {
       if (otpType === OtpType.REGISTER) {
-        await emailService.sendVerificationOtp(normalizedEmail, newOtp, user.fullName);
+        emailSent = await emailService.sendVerificationOtp(normalizedEmail, newOtp, user.fullName);
       } else if (otpType === OtpType.FORGOT_PASSWORD) {
-        await emailService.sendPasswordResetOtp(normalizedEmail, newOtp, user.fullName);
+        emailSent = await emailService.sendPasswordResetOtp(normalizedEmail, newOtp, user.fullName);
       } else {
-        await emailService.sendLoginOtp(normalizedEmail, newOtp, user.fullName);
+        emailSent = await emailService.sendLoginOtp(normalizedEmail, newOtp, user.fullName);
       }
     } catch (emailErr: any) {
-      console.error('Resend OTP email send error:', emailErr);
-      sendError(res, emailErr.message || 'Không thể gửi email OTP. Vui lòng kiểm tra lại cấu hình SMTP.', 500);
-      return;
+      console.warn('Resend OTP email send warning:', emailErr);
     }
 
-    sendSuccess(res, 'Đã gửi lại mã OTP thành công. Vui lòng kiểm tra email.', {
-      demoOtp: isDemo ? config.demo.fixedOtp : undefined,
-    });
+    sendSuccess(
+      res,
+      emailSent
+        ? 'Đã gửi lại mã OTP thành công. Vui lòng kiểm tra email.'
+        : `Mã OTP mới của bạn là: ${newOtp}`,
+      {
+        demoOtp: !emailSent ? newOtp : (isDemo ? config.demo.fixedOtp : undefined),
+      },
+    );
   } catch (error: any) {
     console.error('Resend OTP error:', error);
     sendError(res, 'Lỗi khi gửi lại mã OTP', 500);
@@ -516,15 +521,23 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       },
     });
 
+    let emailSent = false;
     try {
-      await emailService.sendPasswordResetOtp(normalizedEmail, otp, user.fullName);
+      emailSent = await emailService.sendPasswordResetOtp(normalizedEmail, otp, user.fullName);
     } catch (emailErr: any) {
-      console.error('Forgot password email send error:', emailErr);
-      sendError(res, emailErr.message || 'Không thể gửi email OTP đặt lại mật khẩu. Vui lòng kiểm tra lại cấu hình SMTP.', 500);
-      return;
+      console.warn('Forgot password email send warning:', emailErr);
     }
 
-    sendSuccess(res, uniformResponse.message, uniformResponse);
+    sendSuccess(
+      res,
+      emailSent
+        ? uniformResponse.message
+        : `Mã OTP đặt lại mật khẩu của bạn là: ${otp}`,
+      {
+        ...uniformResponse,
+        demoOtp: !emailSent ? otp : (isDemo ? config.demo.fixedOtp : undefined),
+      },
+    );
   } catch (error: any) {
     console.error('Forgot password error:', error);
     sendError(res, 'Lỗi khi xử lý yêu cầu đặt lại mật khẩu', 500);

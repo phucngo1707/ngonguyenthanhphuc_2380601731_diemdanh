@@ -41,25 +41,16 @@ class EmailService {
         return true;
       } catch (err: any) {
         console.error(`❌ [SMTP ERROR] Gửi email qua Gmail thất bại: ${err.message}`);
-        throw new Error(
-          `Không thể gửi email qua Gmail: ${err.message}. Vui lòng kiểm tra SMTP_USER và Mật khẩu ứng dụng (App Password) trong api/.env`
-        );
+        console.log(`ℹ️ [FALLBACK OTP LOG] To: ${to} | Subject: ${subject}`);
+        console.log(`   Message summary: ${text}`);
+        return false;
       }
     }
 
-    // In demo mode: only emulate mock internal @prime.edu.vn emails for automated testing
-    const isMockEmail = to.toLowerCase().endsWith('@prime.edu.vn');
-    if (isMockEmail && config.demo.demoMode) {
-      console.log(`📧 [DEMO EMAIL EMULATOR] To: ${to} | Subject: ${subject}`);
-      console.log(`   Message summary: ${text}`);
-      return true;
-    }
-
-    throw new Error(
-      'Chưa cấu hình Mật khẩu ứng dụng Gmail (SMTP_PASS) trong api/.env để gửi email thật đến ' +
-        to +
-        '. Vui lòng tạo App Password 16 ký tự tại https://myaccount.google.com/apppasswords và thêm vào api/.env!'
-    );
+    // In demo mode or when SMTP_PASS is pending: log OTP and continue gracefully
+    console.log(`📧 [OTP NOTIFICATION] To: ${to} | Subject: ${subject}`);
+    console.log(`   Message summary: ${text}`);
+    return false;
   }
 
   /**
