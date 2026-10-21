@@ -32,7 +32,7 @@ export const config = {
   },
 
   demo: {
-    demoMode: process.env.DEMO_MODE === 'true' || process.env.ENABLE_DEMO_ACCOUNTS === 'true' || true,
+    demoMode: process.env.DEMO_MODE === 'true' || process.env.ENABLE_DEMO_ACCOUNTS === 'true',
     fixedOtp: process.env.DEMO_FIXED_OTP || '123456',
   },
 

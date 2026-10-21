@@ -5,44 +5,61 @@ class EmailService {
   private transporter: nodemailer.Transporter | null = null;
 
   constructor() {
+    this.createTransporter();
+  }
+
+  private createTransporter(): void {
     if (config.smtp.user && config.smtp.pass) {
+      const isGmail = config.smtp.host.toLowerCase().includes('gmail');
       this.transporter = nodemailer.createTransport({
+        service: isGmail ? 'gmail' : undefined,
         host: config.smtp.host,
         port: config.smtp.port,
         secure: config.smtp.port === 465,
         auth: {
           user: config.smtp.user,
-          pass: config.smtp.pass,
+          pass: config.smtp.pass.replace(/\s+/g, ''), // Strip spaces from App Password
         },
       });
     }
   }
 
   private async sendMail(to: string, subject: string, html: string, text: string): Promise<boolean> {
-    if (this.transporter && config.smtp.user && config.smtp.pass) {
+    if (config.smtp.user && config.smtp.pass) {
+      if (!this.transporter) {
+        this.createTransporter();
+      }
       try {
-        await this.transporter.sendMail({
-          from: config.smtp.from,
+        await this.transporter!.sendMail({
+          from: config.smtp.from || `"PRIME Attendance" <${config.smtp.user}>`,
           to,
           subject,
           text,
           html,
         });
-        console.log(`📧 [EMAIL SENT] To: ${to} | Subject: ${subject}`);
+        console.log(`📧 [REAL EMAIL SENT VIA GMAIL] To: ${to} | Subject: ${subject}`);
         return true;
       } catch (err: any) {
-        console.warn(`⚠️ [SMTP ERROR] Could not send email via SMTP (${err.message}). Falling back to log.`);
+        console.error(`❌ [SMTP ERROR] Gửi email qua Gmail thất bại: ${err.message}`);
+        throw new Error(
+          `Không thể gửi email qua Gmail: ${err.message}. Vui lòng kiểm tra SMTP_USER và Mật khẩu ứng dụng (App Password) trong api/.env`
+        );
       }
     }
 
-    // In development/demo or fallback mode: log OTP safely in console
-    if (config.demo.demoMode) {
+    // In demo mode: only emulate mock internal @prime.edu.vn emails for automated testing
+    const isMockEmail = to.toLowerCase().endsWith('@prime.edu.vn');
+    if (isMockEmail && config.demo.demoMode) {
       console.log(`📧 [DEMO EMAIL EMULATOR] To: ${to} | Subject: ${subject}`);
       console.log(`   Message summary: ${text}`);
       return true;
     }
 
-    return false;
+    throw new Error(
+      'Chưa cấu hình Mật khẩu ứng dụng Gmail (SMTP_PASS) trong api/.env để gửi email thật đến ' +
+        to +
+        '. Vui lòng tạo App Password 16 ký tự tại https://myaccount.google.com/apppasswords và thêm vào api/.env!'
+    );
   }
 
   /**

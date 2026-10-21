@@ -19,6 +19,12 @@ const DEMO_EMAILS = [
   'student2@prime.edu.vn',
 ];
 
+const isDemoAccount = (email: string): boolean => {
+  if (!config.demo.demoMode) return false;
+  const normalized = email.toLowerCase().trim();
+  return DEMO_EMAILS.includes(normalized) || normalized.endsWith('@prime.edu.vn');
+};
+
 const generate6DigitOtp = (): string => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };
@@ -91,8 +97,9 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       data: { isUsed: true },
     });
 
-    // Generate 6-digit OTP
-    const otp = config.demo.demoMode ? config.demo.fixedOtp : generate6DigitOtp();
+    // Generate 6-digit OTP (real OTP for real users, demo OTP only for seed demo accounts)
+    const isDemo = isDemoAccount(normalizedEmail);
+    const otp = isDemo ? config.demo.fixedOtp : generate6DigitOtp();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minutes
 
     await prisma.emailOtp.create({
@@ -104,16 +111,24 @@ export const register = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    // Send verification email
-    await emailService.sendVerificationOtp(normalizedEmail, otp, newUser.fullName);
+    // Send verification email via Gmail SMTP
+    try {
+      await emailService.sendVerificationOtp(normalizedEmail, otp, newUser.fullName);
+    } catch (emailErr: any) {
+      console.error('Email verification send error:', emailErr);
+      await prisma.emailOtp.deleteMany({ where: { email: normalizedEmail } });
+      await prisma.user.delete({ where: { id: newUser.id } });
+      sendError(res, emailErr.message || 'Không thể gửi email xác thực. Vui lòng kiểm tra lại cấu hình SMTP.', 500);
+      return;
+    }
 
     sendSuccess(
       res,
-      'Đăng ký tài khoản thành công! Vui lòng nhập mã OTP được gửi tới email để xác thực.',
+      'Đăng ký tài khoản thành công! Mã OTP xác thực đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư (hoặc mục Spam).',
       {
         email: normalizedEmail,
         studentCode: cleanStudentCode,
-        demoOtp: config.demo.demoMode ? config.demo.fixedOtp : undefined,
+        demoOtp: isDemo ? config.demo.fixedOtp : undefined,
       },
       201,
     );
@@ -152,8 +167,9 @@ export const verifyEmail = async (req: Request, res: Response): Promise<void> =>
       return;
     }
 
-    // Check OTP
-    const isDemoOtp = config.demo.demoMode && cleanOtp === config.demo.fixedOtp;
+    // Check OTP (demo OTP only valid for seed demo accounts)
+    const isDemo = isDemoAccount(normalizedEmail);
+    const isDemoOtp = isDemo && cleanOtp === config.demo.fixedOtp;
 
     if (!isDemoOtp) {
       const emailOtp = await prisma.emailOtp.findFirst({
@@ -225,7 +241,7 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
-    const isDemoUser = config.demo.demoMode && DEMO_EMAILS.includes(user.email);
+    const isDemoUser = isDemoAccount(user.email);
     let isPasswordValid = await argon2.verify(user.passwordHash, password);
 
     // Support convenient demo passwords
@@ -252,8 +268,9 @@ export const login = async (req: Request, res: Response): Promise<void> => {
       expiresAt: Date.now() + 10 * 60 * 1000,
     });
 
-    // Generate login OTP
-    const otp = config.demo.demoMode ? config.demo.fixedOtp : generate6DigitOtp();
+    // Generate login OTP (real OTP for real users, demo OTP only for seed demo accounts)
+    const isDemo = isDemoAccount(user.email);
+    const otp = isDemo ? config.demo.fixedOtp : generate6DigitOtp();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     // Invalidate old login OTPs
@@ -272,16 +289,22 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     });
 
     // Send login OTP via email
-    await emailService.sendLoginOtp(user.email, otp, user.fullName);
+    try {
+      await emailService.sendLoginOtp(user.email, otp, user.fullName);
+    } catch (emailErr: any) {
+      console.error('Login email send error:', emailErr);
+      sendError(res, emailErr.message || 'Không thể gửi email OTP đăng nhập. Vui lòng kiểm tra lại cấu hình SMTP.', 500);
+      return;
+    }
 
     sendSuccess(
       res,
-      'Xác thực mật khẩu thành công. Vui lòng nhập mã OTP 6 chữ số được gửi tới email để hoàn tất.',
+      'Xác thực mật khẩu thành công. Mã OTP 6 chữ số đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư.',
       {
         sessionToken,
         email: user.email,
         requiresOtp: true,
-        demoOtp: config.demo.demoMode ? config.demo.fixedOtp : undefined,
+        demoOtp: isDemo ? config.demo.fixedOtp : undefined,
       },
     );
   } catch (error: any) {
@@ -302,6 +325,8 @@ export const verifyLoginOtp = async (req: Request, res: Response): Promise<void>
       return;
     }
 
+    const cleanOtp = otp.toString().trim();
+
     const session = authSessions.get(sessionToken);
     if (!session) {
       sendError(res, 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.', 401);
@@ -314,8 +339,8 @@ export const verifyLoginOtp = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    const cleanOtp = otp.toString().trim();
-    const isDemoOtp = config.demo.demoMode && cleanOtp === config.demo.fixedOtp;
+    const isDemo = isDemoAccount(session.email);
+    const isDemoOtp = isDemo && cleanOtp === config.demo.fixedOtp;
 
     if (!isDemoOtp) {
       const emailOtp = await prisma.emailOtp.findFirst({
@@ -406,7 +431,8 @@ export const resendOtp = async (req: Request, res: Response): Promise<void> => {
       data: { isUsed: true },
     });
 
-    const newOtp = config.demo.demoMode ? config.demo.fixedOtp : generate6DigitOtp();
+    const isDemo = isDemoAccount(normalizedEmail);
+    const newOtp = isDemo ? config.demo.fixedOtp : generate6DigitOtp();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
     await prisma.emailOtp.create({
@@ -418,16 +444,22 @@ export const resendOtp = async (req: Request, res: Response): Promise<void> => {
       },
     });
 
-    if (otpType === OtpType.REGISTER) {
-      await emailService.sendVerificationOtp(normalizedEmail, newOtp, user.fullName);
-    } else if (otpType === OtpType.FORGOT_PASSWORD) {
-      await emailService.sendPasswordResetOtp(normalizedEmail, newOtp, user.fullName);
-    } else {
-      await emailService.sendLoginOtp(normalizedEmail, newOtp, user.fullName);
+    try {
+      if (otpType === OtpType.REGISTER) {
+        await emailService.sendVerificationOtp(normalizedEmail, newOtp, user.fullName);
+      } else if (otpType === OtpType.FORGOT_PASSWORD) {
+        await emailService.sendPasswordResetOtp(normalizedEmail, newOtp, user.fullName);
+      } else {
+        await emailService.sendLoginOtp(normalizedEmail, newOtp, user.fullName);
+      }
+    } catch (emailErr: any) {
+      console.error('Resend OTP email send error:', emailErr);
+      sendError(res, emailErr.message || 'Không thể gửi email OTP. Vui lòng kiểm tra lại cấu hình SMTP.', 500);
+      return;
     }
 
     sendSuccess(res, 'Đã gửi lại mã OTP thành công. Vui lòng kiểm tra email.', {
-      demoOtp: config.demo.demoMode ? config.demo.fixedOtp : undefined,
+      demoOtp: isDemo ? config.demo.fixedOtp : undefined,
     });
   } catch (error: any) {
     console.error('Resend OTP error:', error);
@@ -452,11 +484,13 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       where: { email: normalizedEmail },
     });
 
+    const isDemo = isDemoAccount(normalizedEmail);
+
     // Uniform response to never leak whether email exists
     const uniformResponse = {
       message: 'Nếu địa chỉ email tồn tại trong hệ thống, mã xác nhận đặt lại mật khẩu đã được gửi đến hộp thư.',
       email: normalizedEmail,
-      demoOtp: config.demo.demoMode ? config.demo.fixedOtp : undefined,
+      demoOtp: isDemo ? config.demo.fixedOtp : undefined,
     };
 
     if (!user || !user.isActive) {
@@ -470,7 +504,7 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       data: { isUsed: true },
     });
 
-    const otp = config.demo.demoMode ? config.demo.fixedOtp : generate6DigitOtp();
+    const otp = isDemo ? config.demo.fixedOtp : generate6DigitOtp();
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes as required
 
     await prisma.emailOtp.create({
@@ -482,7 +516,13 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       },
     });
 
-    await emailService.sendPasswordResetOtp(normalizedEmail, otp, user.fullName);
+    try {
+      await emailService.sendPasswordResetOtp(normalizedEmail, otp, user.fullName);
+    } catch (emailErr: any) {
+      console.error('Forgot password email send error:', emailErr);
+      sendError(res, emailErr.message || 'Không thể gửi email OTP đặt lại mật khẩu. Vui lòng kiểm tra lại cấu hình SMTP.', 500);
+      return;
+    }
 
     sendSuccess(res, uniformResponse.message, uniformResponse);
   } catch (error: any) {
@@ -526,7 +566,8 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
-    const isDemoOtp = config.demo.demoMode && cleanOtp === config.demo.fixedOtp;
+    const isDemo = isDemoAccount(normalizedEmail);
+    const isDemoOtp = isDemo && cleanOtp === config.demo.fixedOtp;
 
     if (!isDemoOtp) {
       const emailOtp = await prisma.emailOtp.findFirst({
@@ -557,8 +598,12 @@ export const resetPassword = async (req: Request, res: Response): Promise<void> 
       data: { passwordHash },
     });
 
-    // Send confirmation notice
-    await emailService.sendPasswordChangeConfirmation(normalizedEmail, user.fullName);
+    // Send confirmation notice (non-fatal if fails)
+    try {
+      await emailService.sendPasswordChangeConfirmation(normalizedEmail, user.fullName);
+    } catch (confErr: any) {
+      console.warn('Could not send password change confirmation notice:', confErr.message);
+    }
 
     sendSuccess(res, 'Đặt lại mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới.');
   } catch (error: any) {
