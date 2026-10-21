@@ -380,6 +380,8 @@ export const verifyLoginOtp = async (req: Request, res: Response): Promise<void>
         phoneNumber: true,
         isActive: true,
         isEmailVerified: true,
+        isFaceEnrolled: true,
+        faceEnrolledAt: true,
       },
     });
 
@@ -661,6 +663,8 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
         phoneNumber: true,
         isActive: true,
         isEmailVerified: true,
+        isFaceEnrolled: true,
+        faceEnrolledAt: true,
         createdAt: true,
       },
     });
@@ -715,6 +719,15 @@ export const faceLogin = async (req: Request, res: Response): Promise<void> => {
       return;
     }
 
+    if (!user.isFaceEnrolled) {
+      sendError(
+        res,
+        'Tài khoản này chưa đăng ký nhận diện khuôn mặt trong phần Cài đặt. Vui lòng đăng nhập bằng mật khẩu và cài đặt khuôn mặt trước.',
+        400,
+      );
+      return;
+    }
+
     const token = signAccessToken(user);
 
     sendSuccess(res, `Xác thực khuôn mặt thành công! Xin chào ${user.fullName}`, {
@@ -730,10 +743,53 @@ export const faceLogin = async (req: Request, res: Response): Promise<void> => {
         phoneNumber: user.phoneNumber,
         isActive: user.isActive,
         isEmailVerified: user.isEmailVerified,
+        isFaceEnrolled: user.isFaceEnrolled,
+        faceEnrolledAt: user.faceEnrolledAt,
       },
     });
   } catch (error: any) {
     console.error('Face login error:', error);
     sendError(res, 'Lỗi hệ thống khi đăng nhập bằng khuôn mặt', 500);
+  }
+};
+
+/**
+ * 11. Enroll / Register Biometric Face in Settings
+ */
+export const enrollFace = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      sendError(res, 'Vui lòng đăng nhập để đăng ký khuôn mặt', 401);
+      return;
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        isFaceEnrolled: true,
+        faceEnrolledAt: new Date(),
+      },
+    });
+
+    sendSuccess(res, 'Đăng ký và xác thực khuôn mặt (Face ID) thành công!', {
+      user: {
+        id: updatedUser.id,
+        username: updatedUser.username,
+        email: updatedUser.email,
+        fullName: updatedUser.fullName,
+        role: updatedUser.role,
+        studentCode: updatedUser.studentCode,
+        teacherCode: updatedUser.teacherCode,
+        phoneNumber: updatedUser.phoneNumber,
+        isActive: updatedUser.isActive,
+        isEmailVerified: updatedUser.isEmailVerified,
+        isFaceEnrolled: updatedUser.isFaceEnrolled,
+        faceEnrolledAt: updatedUser.faceEnrolledAt,
+      },
+    });
+  } catch (error: any) {
+    console.error('Enroll face error:', error);
+    sendError(res, 'Lỗi hệ thống khi đăng ký khuôn mặt', 500);
   }
 };

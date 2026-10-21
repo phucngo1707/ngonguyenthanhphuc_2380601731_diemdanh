@@ -162,6 +162,35 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  // Enroll / Register Face Biometrics in Settings
+  Future<bool> enrollFace({String? faceData}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final res = await ApiService.post('/auth/enroll-face', {
+        'faceData': faceData ?? 'face_vector_${DateTime.now().millisecondsSinceEpoch}',
+      });
+
+      _isLoading = false;
+      if (res['success'] == true && res['data'] != null) {
+        _currentUser = UserModel.fromJson(res['data']['user']);
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = res['message'] ?? 'Đăng ký khuôn mặt thất bại';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     try {
       if (_token != null) {

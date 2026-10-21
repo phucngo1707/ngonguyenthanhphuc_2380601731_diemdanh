@@ -242,16 +242,36 @@ class _FaceScanLoginScreenState extends State<FaceScanLoginScreen>
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: Colors.red.shade400),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _errorMessage!,
-                          style: const TextStyle(color: Colors.white, fontSize: 12),
-                        ),
+                      Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _errorMessage!,
+                              style: const TextStyle(color: Colors.white, fontSize: 12),
+                            ),
+                          ),
+                        ],
                       ),
+                      if (_errorMessage!.contains('Cài đặt') || _errorMessage!.contains('chưa')) ...[
+                        const SizedBox(height: 6),
+                        TextButton.icon(
+                          style: TextButton.styleFrom(
+                            foregroundColor: const Color(0xFF38BDF8),
+                            padding: EdgeInsets.zero,
+                          ),
+                          icon: const Icon(Icons.arrow_back, size: 14),
+                          label: const Text(
+                            'Quay lại Đăng nhập bằng Mật khẩu để vào Cài đặt',
+                            style: TextStyle(fontSize: 12, decoration: TextDecoration.underline),
+                          ),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+                      ],
                     ],
                   ),
                 ),

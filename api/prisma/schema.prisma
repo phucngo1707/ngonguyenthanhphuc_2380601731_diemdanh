@@ -60,6 +60,8 @@ model User {
   studentCode     String?   @unique @map("student_code") @db.VarChar(30)
   teacherCode     String?   @unique @map("teacher_code") @db.VarChar(30)
   isEmailVerified Boolean   @default(true) @map("is_email_verified")
+  isFaceEnrolled  Boolean   @default(false) @map("is_face_enrolled")
+  faceEnrolledAt  DateTime? @map("face_enrolled_at")
   isActive        Boolean   @default(true) @map("is_active")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
