@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: ngonguyenthanhphuc-attendance-api
+    env: node
+    rootDir: api
+    plan: free
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npx prisma db push && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: APP_NAME
+        value: NgoNguyenThanhPhuc_2380601731_DiemDanhAPI
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        value: prime_jwt_access_super_secret_key_change_in_production_2026
+      - key: SMTP_HOST
+        value: smtp.gmail.com
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        value: phucngo1707@gmail.com
+      - key: SMTP_PASS
+        value: iywc olkk xxkl gwca
+      - key: DEMO_MODE
+        value: "true"
+      - key: DEMO_FIXED_OTP
+        value: "123456"
