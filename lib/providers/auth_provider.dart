@@ -127,6 +127,41 @@ class AuthProvider with ChangeNotifier {
     await verifyOtp('123456');
   }
 
+  // Biometric Face ID Quick Login
+  Future<bool> faceLogin(String account, {String? faceBiometric}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final res = await ApiService.post('/auth/face-login', {
+        'account': account.trim(),
+        'faceData': faceBiometric ?? 'biometric_verified_true',
+      });
+
+      _isLoading = false;
+      if (res['success'] == true && res['data'] != null) {
+        _token = res['data']['token'];
+        _currentUser = UserModel.fromJson(res['data']['user']);
+
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('auth_token', _token!);
+
+        notifyListeners();
+        return true;
+      } else {
+        _errorMessage = res['message'] ?? 'Xác thực khuôn mặt thất bại';
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> logout() async {
     try {
       if (_token != null) {

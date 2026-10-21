@@ -80,8 +80,9 @@ export const getClassById = async (req: Request, res: Response): Promise<void> =
 export const createClass = async (req: Request, res: Response): Promise<void> => {
   try {
     const { code, name, subjectName, teacherId, room, schedule, semester } = req.body;
+    const assignedTeacherId = teacherId || (req.user?.role === UserRole.TEACHER ? req.user.id : null);
 
-    if (!code || !name || !subjectName || !teacherId) {
+    if (!code || !name || !subjectName || !assignedTeacherId) {
       sendError(res, 'Vui lòng cung cấp mã lớp, tên lớp, môn học và giảng viên phụ trách', 400);
       return;
     }
@@ -91,7 +92,7 @@ export const createClass = async (req: Request, res: Response): Promise<void> =>
         code,
         name,
         subjectName,
-        teacherId,
+        teacherId: assignedTeacherId,
         room: room || 'P.A1-301',
         schedule: schedule || 'Thứ 2 (07:30 - 11:00)',
         semester: semester || 'HK1-2025-2026',
@@ -228,3 +229,73 @@ export const removeStudentFromClass = async (req: Request, res: Response): Promi
     sendError(res, 'Không tìm thấy sinh viên trong lớp', 404);
   }
 };
+
+/**
+ * Student joins class using Class Code
+ */
+export const joinClassByCode = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { classCode } = req.body;
+
+    if (!classCode || !classCode.trim()) {
+      sendError(res, 'Vui lòng cung cấp mã lớp học phần (Class Code)', 400);
+      return;
+    }
+
+    const cleanCode = classCode.trim();
+
+    const classData = await prisma.class.findFirst({
+      where: {
+        code: { equals: cleanCode },
+      },
+      include: {
+        teacher: { select: { fullName: true, email: true } },
+      },
+    });
+
+    if (!classData) {
+      sendError(res, `Không tìm thấy lớp học phần có mã "${cleanCode}". Vui lòng kiểm tra lại.`, 404);
+      return;
+    }
+
+    if (classData.isArchived) {
+      sendError(res, 'Lớp học phần này đã kết thúc hoặc lưu trữ, không thể tham gia.', 400);
+      return;
+    }
+
+    // Check if already enrolled
+    const existing = await prisma.enrollment.findUnique({
+      where: {
+        unique_student_class: {
+          studentId: req.user!.id,
+          classId: classData.id,
+        },
+      },
+    });
+
+    if (existing) {
+      sendError(res, 'Bạn đã là thành viên của lớp học phần này rồi!', 400);
+      return;
+    }
+
+    const enrollment = await prisma.enrollment.create({
+      data: {
+        studentId: req.user!.id,
+        classId: classData.id,
+      },
+      include: {
+        class: {
+          include: {
+            teacher: { select: { fullName: true, email: true } },
+          },
+        },
+      },
+    });
+
+    sendSuccess(res, `Tham gia lớp "${classData.name}" (${classData.code}) thành công!`, enrollment, 201);
+  } catch (error: any) {
+    console.error('Join class error:', error);
+    sendError(res, 'Lỗi khi tham gia lớp học phần', 500);
+  }
+};
+

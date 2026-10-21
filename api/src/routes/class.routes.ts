@@ -7,6 +7,7 @@ import {
   deleteClass,
   enrollStudent,
   removeStudentFromClass,
+  joinClassByCode,
 } from '../controllers/class.controller';
 import { authenticateJwt } from '../middlewares/auth.middleware';
 import { requireAdmin, requireTeacher } from '../middlewares/role.middleware';
@@ -16,9 +17,10 @@ const router = Router();
 router.use(authenticateJwt);
 
 router.get('/', listClasses);
+router.post('/join', joinClassByCode);
 router.get('/:id', getClassById);
-router.post('/', requireAdmin, createClass);
-router.put('/:id', requireAdmin, updateClass);
+router.post('/', requireTeacher, createClass);
+router.put('/:id', requireTeacher, updateClass);
 router.delete('/:id', requireAdmin, deleteClass);
 
 // Enrollments

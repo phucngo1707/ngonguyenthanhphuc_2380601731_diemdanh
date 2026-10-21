@@ -8,6 +8,7 @@ import 'teacher/teacher_home_screen.dart';
 import 'student/student_home_screen.dart';
 import 'auth/register_screen.dart';
 import 'auth/forgot_password_screen.dart';
+import 'auth/face_scan_login_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -233,6 +234,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: InputDecoration(
                         labelText: 'Email hoặc Tên đăng nhập',
                         prefixIcon: const Icon(Icons.person_outline),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.face_retouching_natural, color: Color(0xFF0284C7)),
+                          tooltip: 'Đăng nhập nhanh bằng Khuôn mặt (Face ID)',
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => FaceScanLoginScreen(
+                                  initialAccount: _usernameController.text.trim().isNotEmpty
+                                      ? _usernameController.text.trim()
+                                      : null,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         filled: true,
                         fillColor: Colors.white,
@@ -300,6 +317,34 @@ class _LoginScreenState extends State<LoginScreen> {
                               'TIẾP TỤC (BƯỚC 1/3)',
                               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0284C7),
+                        side: const BorderSide(color: Color(0xFF0284C7), width: 1.5),
+                        minimumSize: const Size.fromHeight(50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      icon: const Icon(Icons.face_retouching_natural, size: 22),
+                      label: const Text(
+                        'QUÉT KHUÔN MẶT ĐĂNG NHẬP (FACE ID)',
+                        style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => FaceScanLoginScreen(
+                              initialAccount: _usernameController.text.trim().isNotEmpty
+                                  ? _usernameController.text.trim()
+                                  : null,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                     const SizedBox(height: 16),
                     Row(

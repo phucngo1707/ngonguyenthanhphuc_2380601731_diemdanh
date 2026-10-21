@@ -675,3 +675,65 @@ export const getMe = async (req: Request, res: Response): Promise<void> => {
     sendError(res, 'Lỗi khi lấy thông tin người dùng', 500);
   }
 };
+
+/**
+ * 10. Quick Login with Biometric Face Scan & Account Name
+ */
+export const faceLogin = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { emailOrUsername, account, faceData } = req.body;
+    const accountInput = (emailOrUsername || account || '').trim();
+
+    if (!accountInput) {
+      sendError(res, 'Vui lòng cung cấp tên đăng nhập, email hoặc MSSV để quét khuôn mặt', 400);
+      return;
+    }
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: accountInput.toLowerCase() },
+          { username: accountInput },
+          { studentCode: accountInput.toUpperCase() },
+          { teacherCode: accountInput.toUpperCase() },
+        ],
+      },
+    });
+
+    if (!user) {
+      sendError(res, 'Không tìm thấy tài khoản với thông tin đã cung cấp', 404);
+      return;
+    }
+
+    if (!user.isActive) {
+      sendError(res, 'Tài khoản của bạn đã bị khóa', 403);
+      return;
+    }
+
+    if (!user.isEmailVerified) {
+      sendError(res, 'Tài khoản chưa được xác thực email. Vui lòng xác thực trước khi sử dụng đăng nhập nhanh.', 403);
+      return;
+    }
+
+    const token = signAccessToken(user);
+
+    sendSuccess(res, `Xác thực khuôn mặt thành công! Xin chào ${user.fullName}`, {
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+        studentCode: user.studentCode,
+        teacherCode: user.teacherCode,
+        phoneNumber: user.phoneNumber,
+        isActive: user.isActive,
+        isEmailVerified: user.isEmailVerified,
+      },
+    });
+  } catch (error: any) {
+    console.error('Face login error:', error);
+    sendError(res, 'Lỗi hệ thống khi đăng nhập bằng khuôn mặt', 500);
+  }
+};

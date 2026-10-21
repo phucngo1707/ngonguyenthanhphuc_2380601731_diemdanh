@@ -25,6 +25,12 @@ class EmailService {
   }
 
   private async sendMail(to: string, subject: string, html: string, text: string): Promise<boolean> {
+    const isMockEmail = to.toLowerCase().endsWith('@prime.edu.vn');
+    if (isMockEmail && config.demo.demoMode) {
+      console.log(`📧 [DEMO EMAIL EMULATOR] To: ${to} | Subject: ${subject}`);
+      return true;
+    }
+
     if (config.smtp.user && config.smtp.pass) {
       if (!this.transporter) {
         this.createTransporter();

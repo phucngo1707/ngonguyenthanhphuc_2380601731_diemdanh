@@ -33,6 +33,9 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> with SingleTicker
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     _loadAllData();
     _initShakeDetector();
   }
@@ -128,6 +131,131 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> with SingleTicker
     });
   }
 
+  void _showJoinClassDialog() {
+    final codeController = TextEditingController();
+    bool isSubmitting = false;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: const [
+              Icon(Icons.group_add, color: Color(0xFF1E3A8A)),
+              SizedBox(width: 8),
+              Text(
+                'Tham Gia Lớp Học',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Nhập Mã lớp học phần (Class Code) do giảng viên cung cấp để ghi danh vào lớp:',
+                style: TextStyle(fontSize: 13, color: Colors.grey),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: codeController,
+                textCapitalization: TextCapitalization.characters,
+                decoration: InputDecoration(
+                  labelText: 'Mã lớp học *',
+                  hintText: 'Ví dụ: PRIME_CNTT_01',
+                  prefixIcon: const Icon(Icons.vpn_key_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  filled: true,
+                  fillColor: Colors.grey.shade50,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                children: [
+                  ActionChip(
+                    avatar: const Icon(Icons.bolt, size: 16, color: Colors.amber),
+                    label: const Text('PRIME_CNTT_01', style: TextStyle(fontSize: 12)),
+                    onPressed: () {
+                      setDialogState(() {
+                        codeController.text = 'PRIME_CNTT_01';
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+              child: const Text('Hủy'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1E3A8A),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              onPressed: isSubmitting
+                  ? null
+                  : () async {
+                      final code = codeController.text.trim();
+                      if (code.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Vui lòng nhập mã lớp học')),
+                        );
+                        return;
+                      }
+
+                      setDialogState(() => isSubmitting = true);
+                      try {
+                        final res = await ApiService.post('/classes/join', {'classCode': code});
+                        if (!mounted) return;
+                        Navigator.pop(ctx);
+                        if (res['success'] == true) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(res['message'] ?? 'Tham gia lớp thành công!'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                          _fetchClasses();
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(res['message'] ?? 'Không thể tham gia lớp'),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        if (!mounted) return;
+                        setDialogState(() => isSubmitting = false);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(e.toString().replaceAll('Exception: ', '')),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      }
+                    },
+              child: isSubmitting
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Text('Tham gia'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = Provider.of<AuthProvider>(context).user;
@@ -150,6 +278,11 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> with SingleTicker
         backgroundColor: const Color(0xFF1E3A8A),
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.group_add),
+            tooltip: 'Tham gia lớp học',
+            onPressed: _showJoinClassDialog,
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Làm mới',
@@ -248,22 +381,30 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> with SingleTicker
           ),
         ],
       ),
-      floatingActionButton: _tabController.index == 2
+      floatingActionButton: _tabController.index == 0
           ? FloatingActionButton.extended(
               backgroundColor: const Color(0xFF1E3A8A),
               foregroundColor: Colors.white,
-              icon: const Icon(Icons.add),
-              label: const Text('Xin nghỉ phép'),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => LeaveRequestScreen(enrolledClasses: _classes),
-                  ),
-                ).then((_) => _fetchLeaves());
-              },
+              icon: const Icon(Icons.group_add),
+              label: const Text('Tham gia lớp'),
+              onPressed: _showJoinClassDialog,
             )
-          : null,
+          : (_tabController.index == 2
+              ? FloatingActionButton.extended(
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  foregroundColor: Colors.white,
+                  icon: const Icon(Icons.add),
+                  label: const Text('Xin nghỉ phép'),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LeaveRequestScreen(enrolledClasses: _classes),
+                      ),
+                    ).then((_) => _fetchLeaves());
+                  },
+                )
+              : null),
     );
   }
 
@@ -271,18 +412,52 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> with SingleTicker
     if (_isLoadingClasses) return const Center(child: CircularProgressIndicator());
     if (_classes.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.school_outlined, size: 64, color: Colors.grey.shade400),
-            const SizedBox(height: 12),
-            Text('Bạn chưa có lớp học phần nào', style: TextStyle(color: Colors.grey.shade600)),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E3A8A).withOpacity(0.08),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.school_outlined, size: 64, color: Color(0xFF1E3A8A)),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Bạn chưa tham gia lớp học nào',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Nhập mã lớp do Giảng viên cung cấp để tham gia lớp học và điểm danh điểm danh GPS/QR/BLE.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: _showJoinClassDialog,
+                icon: const Icon(Icons.group_add),
+                label: const Text('THAM GIA LỚP HỌC NGAY'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E3A8A),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  elevation: 3,
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    return ListView.builder(
+    return RefreshIndicator(
+      onRefresh: _fetchClasses,
+      child: ListView.builder(
       padding: const EdgeInsets.all(12),
       itemCount: _classes.length,
       itemBuilder: (context, index) {
@@ -336,8 +511,9 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> with SingleTicker
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHistoryTab() {
     if (_isLoadingHistory) return const Center(child: CircularProgressIndicator());

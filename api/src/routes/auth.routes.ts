@@ -9,6 +9,7 @@ import {
   resetPassword,
   logout,
   getMe,
+  faceLogin,
 } from '../controllers/auth.controller';
 import { authenticateJwt } from '../middlewares/auth.middleware';
 
@@ -17,6 +18,7 @@ const router = Router();
 router.post('/register', register);
 router.post('/verify-email', verifyEmail);
 router.post('/login', login);
+router.post('/face-login', faceLogin);
 router.post('/verify-login-otp', verifyLoginOtp);
 router.post('/verify-otp', verifyLoginOtp); // Backwards-compatible alias
 router.post('/resend-otp', resendOtp);
