@@ -9,6 +9,7 @@ class UserModel {
   final String? phoneNumber;
   final bool isFaceEnrolled;
   final DateTime? faceEnrolledAt;
+  final String? facePhoto;
 
   UserModel({
     required this.id,
@@ -21,6 +22,7 @@ class UserModel {
     this.phoneNumber,
     this.isFaceEnrolled = false,
     this.faceEnrolledAt,
+    this.facePhoto,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -42,6 +44,7 @@ class UserModel {
       phoneNumber: json['phoneNumber'] ?? json['phone_number'],
       isFaceEnrolled: json['isFaceEnrolled'] == true || json['is_face_enrolled'] == true,
       faceEnrolledAt: enrolledAt,
+      facePhoto: json['facePhoto'] ?? json['face_photo'],
     );
   }
 
@@ -57,6 +60,7 @@ class UserModel {
       'phoneNumber': phoneNumber,
       'isFaceEnrolled': isFaceEnrolled,
       'faceEnrolledAt': faceEnrolledAt?.toIso8601String(),
+      'facePhoto': facePhoto,
     };
   }
 }

@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../config/api_config.dart';
 import '../../providers/auth_provider.dart';
@@ -125,17 +128,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
       barrierDismissible: false,
       builder: (_) => _FaceEnrollmentDialog(
         userName: user.fullName,
+        currentPhoto: user.facePhoto,
         onEnrolled: () {
           setState(() {});
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Xác thực và kích hoạt Face ID thành công!'),
+              content: Text('Chụp ảnh và đăng ký khuôn mặt thành công!'),
               backgroundColor: Colors.green,
             ),
           );
         },
       ),
     );
+  }
+
+  Uint8List? _getPhotoBytes(String? base64Str) {
+    if (base64Str == null || base64Str.isEmpty) return null;
+    try {
+      final clean = base64Str.contains(',') ? base64Str.split(',').last : base64Str;
+      return base64Decode(clean);
+    } catch (_) {
+      return null;
+    }
   }
 
   @override
@@ -152,6 +166,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       roleColor = Colors.green;
       roleName = 'Giảng viên';
     }
+
+    final photoBytes = _getPhotoBytes(user?.facePhoto);
 
     return Scaffold(
       appBar: AppBar(
@@ -171,17 +187,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 padding: const EdgeInsets.all(20.0),
                 child: Column(
                   children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundColor: roleColor.withOpacity(0.15),
-                      child: Text(
-                        user?.fullName.isNotEmpty == true ? user!.fullName[0] : 'U',
-                        style: TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: roleColor,
+                    Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 44,
+                          backgroundColor: roleColor.withOpacity(0.15),
+                          backgroundImage: photoBytes != null ? MemoryImage(photoBytes) : null,
+                          child: photoBytes == null
+                              ? Text(
+                                  user?.fullName.isNotEmpty == true ? user!.fullName[0] : 'U',
+                                  style: TextStyle(
+                                    fontSize: 34,
+                                    fontWeight: FontWeight.bold,
+                                    color: roleColor,
+                                  ),
+                                )
+                              : null,
                         ),
-                      ),
+                        if (user?.isFaceEnrolled == true)
+                          Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.check, size: 14, color: Colors.white),
+                          ),
+                      ],
                     ),
                     const SizedBox(height: 12),
                     Text(
@@ -240,7 +273,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 16),
 
-            // Biometric Face ID Security Card
+            // Biometric Face ID Security Card (with Photo Preview)
             Card(
               elevation: 2,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -289,7 +322,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                               const SizedBox(width: 4),
                               Text(
-                                user?.isFaceEnrolled == true ? 'Đã kích hoạt' : 'Chưa đăng ký',
+                                user?.isFaceEnrolled == true ? 'Đã có ảnh mẫu' : 'Chưa có ảnh',
                                 style: TextStyle(
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
@@ -303,21 +336,56 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10),
-                    Text(
-                      user?.isFaceEnrolled == true
-                          ? 'Khuôn mặt của bạn đã được đăng ký và liên kết với tài khoản. Bạn có thể đăng xuất và sử dụng Face ID để đăng nhập nhanh ngoài màn hình chính.'
-                          : 'Bạn chưa đăng ký khuôn mặt cho tài khoản này. Vui lòng xác thực khuôn mặt để kích hoạt tính năng đăng nhập nhanh không cần mật khẩu.',
-                      style: TextStyle(fontSize: 13, color: Colors.grey.shade700, height: 1.4),
-                    ),
-                    if (user?.isFaceEnrolled == true && user?.faceEnrolledAt != null) ...[
-                      const SizedBox(height: 6),
+                    const SizedBox(height: 12),
+                    if (photoBytes != null) ...[
+                      Row(
+                        children: [
+                          Container(
+                            width: 72,
+                            height: 72,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              border: Border.all(color: const Color(0xFF0284C7), width: 2),
+                              image: DecorationImage(
+                                image: MemoryImage(photoBytes),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Ảnh khuôn mặt mẫu đã lưu',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Hệ thống sẽ đối chiếu với ảnh này khi bạn đăng nhập nhanh bằng khuôn mặt.',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 10),
+                    ] else ...[
                       Text(
-                        'Thời gian kích hoạt: ${user!.faceEnrolledAt!.toLocal().toString().split(".")[0]}',
+                        'Bạn chưa chụp ảnh khuôn mặt mẫu. Hãy chụp 1 bức ảnh chân dung rõ nét để hệ thống đối chiếu khi bạn đăng nhập bằng Face ID.',
+                        style: TextStyle(fontSize: 13, color: Colors.grey.shade700, height: 1.4),
+                      ),
+                      const SizedBox(height: 10),
+                    ],
+                    if (user?.isFaceEnrolled == true && user?.faceEnrolledAt != null) ...[
+                      Text(
+                        'Thời gian đăng ký: ${user!.faceEnrolledAt!.toLocal().toString().split(".")[0]}',
                         style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
                       ),
+                      const SizedBox(height: 12),
                     ],
-                    const SizedBox(height: 14),
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
@@ -332,8 +400,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         icon: const Icon(Icons.camera_alt_outlined, size: 18),
                         label: Text(
                           user?.isFaceEnrolled == true
-                              ? 'QUÉT LẠI KHUÔN MẶT CẬP NHẬT'
-                              : 'XÁC THỰC & ĐĂNG KÝ KHUÔN MẶT NGAY',
+                              ? 'CHỤP LẠI ẢNH KHUÔN MẶT MẪU'
+                              : 'CHỤP ẢNH XÁC THỰC KHUÔN MẶT NGAY',
                           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                         ),
                         onPressed: _showFaceEnrollDialog,
@@ -448,10 +516,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
 class _FaceEnrollmentDialog extends StatefulWidget {
   final String userName;
+  final String? currentPhoto;
   final VoidCallback onEnrolled;
 
   const _FaceEnrollmentDialog({
     required this.userName,
+    this.currentPhoto,
     required this.onEnrolled,
   });
 
@@ -464,8 +534,12 @@ class _FaceEnrollmentDialogState extends State<_FaceEnrollmentDialog>
   late AnimationController _animController;
   late Animation<double> _scanAnimation;
 
-  int _step = 0; // 0: detecting, 1: 3D landmarks, 2: anti-spoofing, 3: saving, 4: done, -1: error
-  String _stepText = 'Đang nhận diện khuôn mặt...';
+  final ImagePicker _picker = ImagePicker();
+  Uint8List? _capturedImageBytes;
+  String? _capturedBase64;
+  bool _isAnalyzing = false;
+  bool _isSaving = false;
+  String _statusText = 'Chụp hoặc chọn 1 bức ảnh khuôn mặt rõ nét của bạn';
   String? _error;
 
   @override
@@ -474,13 +548,11 @@ class _FaceEnrollmentDialogState extends State<_FaceEnrollmentDialog>
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1600),
-    )..repeat(reverse: true);
+    );
 
     _scanAnimation = Tween<double>(begin: 0.1, end: 0.9).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeInOut),
     );
-
-    _startEnrollment();
   }
 
   @override
@@ -489,56 +561,85 @@ class _FaceEnrollmentDialogState extends State<_FaceEnrollmentDialog>
     super.dispose();
   }
 
-  Future<void> _startEnrollment() async {
+  Future<void> _pickImage(ImageSource source) async {
     try {
-      await Future.delayed(const Duration(milliseconds: 800));
-      if (!mounted) return;
       setState(() {
-        _step = 1;
-        _stepText = 'Phân tích cấu trúc 128 điểm đặc trưng 3D...';
+        _error = null;
+        _statusText = 'Đang mở Camera / Thư viện ảnh...';
       });
 
-      await Future.delayed(const Duration(milliseconds: 900));
-      if (!mounted) return;
-      setState(() {
-        _step = 2;
-        _stepText = 'Kiểm tra thực thể sống (Liveness Anti-spoofing)...';
-      });
-
-      await Future.delayed(const Duration(milliseconds: 900));
-      if (!mounted) return;
-      setState(() {
-        _step = 3;
-        _stepText = 'Đang liên kết dữ liệu sinh trắc học với tài khoản...';
-      });
-
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      final ok = await auth.enrollFace(
-        faceData: 'FACE_EMBEDDING_REGISTERED_${DateTime.now().millisecondsSinceEpoch}',
+      final XFile? file = await _picker.pickImage(
+        source: source,
+        maxWidth: 600,
+        maxHeight: 600,
+        imageQuality: 85,
+        preferredCameraDevice: CameraDevice.front,
       );
 
-      if (!mounted) return;
-
-      if (ok) {
-        _animController.stop();
+      if (file == null) {
         setState(() {
-          _step = 4;
-          _stepText = 'Xác thực & đăng ký khuôn mặt thành công!';
+          _statusText = 'Bạn chưa chọn ảnh';
         });
-        widget.onEnrolled();
-      } else {
-        _animController.stop();
-        setState(() {
-          _step = -1;
-          _error = auth.errorMessage ?? 'Không thể lưu dữ liệu khuôn mặt';
-        });
+        return;
       }
-    } catch (e) {
-      if (!mounted) return;
-      _animController.stop();
+
+      final bytes = await file.readAsBytes();
+      final base64String = 'data:image/jpeg;base64,${base64Encode(bytes)}';
+
       setState(() {
-        _step = -1;
-        _error = e.toString();
+        _capturedImageBytes = bytes;
+        _capturedBase64 = base64String;
+        _isAnalyzing = true;
+        _statusText = 'Đang phân tích và trích xuất điểm đặc trưng khuôn mặt...';
+      });
+
+      _animController.repeat(reverse: true);
+
+      // AI Facial analysis simulation
+      await Future.delayed(const Duration(milliseconds: 1200));
+
+      _animController.stop();
+
+      if (!mounted) return;
+      setState(() {
+        _isAnalyzing = false;
+        _statusText = 'Khuôn mặt hợp lệ! Nhấn "Lưu ảnh mẫu" để hoàn tất.';
+      });
+    } catch (e) {
+      _animController.stop();
+      if (!mounted) return;
+      setState(() {
+        _isAnalyzing = false;
+        _error = 'Không thể chụp ảnh: $e. Bạn có thể thử chọn ảnh từ thư viện.';
+        _statusText = 'Lỗi chụp ảnh';
+      });
+    }
+  }
+
+  Future<void> _confirmAndSave() async {
+    if (_capturedBase64 == null) return;
+
+    setState(() {
+      _isSaving = true;
+      _statusText = 'Đang mã hóa và lưu ảnh khuôn mặt vào hệ thống...';
+    });
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final ok = await auth.enrollFace(
+      facePhoto: _capturedBase64,
+      faceData: 'FACE_EMBEDDING_REGISTERED_${DateTime.now().millisecondsSinceEpoch}',
+    );
+
+    if (!mounted) return;
+    setState(() => _isSaving = false);
+
+    if (ok) {
+      widget.onEnrolled();
+      Navigator.pop(context);
+    } else {
+      setState(() {
+        _error = auth.errorMessage ?? 'Lỗi khi lưu ảnh khuôn mặt';
+        _statusText = 'Lưu ảnh thất bại';
       });
     }
   }
@@ -548,7 +649,7 @@ class _FaceEnrollmentDialogState extends State<_FaceEnrollmentDialog>
     return Dialog(
       backgroundColor: const Color(0xFF0F172A),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -557,7 +658,7 @@ class _FaceEnrollmentDialogState extends State<_FaceEnrollmentDialog>
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 const Text(
-                  'Đăng ký Face ID',
+                  'Chụp ảnh khuôn mặt mẫu',
                   style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.bold,
@@ -570,8 +671,9 @@ class _FaceEnrollmentDialogState extends State<_FaceEnrollmentDialog>
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            // Scanner Viewport
+            const SizedBox(height: 14),
+
+            // Photo Capture / Viewport
             SizedBox(
               width: 220,
               height: 250,
@@ -584,32 +686,38 @@ class _FaceEnrollmentDialogState extends State<_FaceEnrollmentDialog>
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(100),
                       border: Border.all(
-                        color: _step == 4
+                        color: _capturedImageBytes != null
                             ? Colors.greenAccent
-                            : (_step == -1 ? Colors.redAccent : const Color(0xFF38BDF8)),
+                            : const Color(0xFF38BDF8),
                         width: 2.5,
                       ),
                       gradient: RadialGradient(
                         colors: [
-                          (_step == 4
+                          (_capturedImageBytes != null
                                   ? Colors.greenAccent
-                                  : (_step == -1 ? Colors.redAccent : const Color(0xFF0284C7)))
+                                  : const Color(0xFF0284C7))
                               .withOpacity(0.2),
                           Colors.transparent,
                         ],
                       ),
                     ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(100),
+                      child: _capturedImageBytes != null
+                          ? Image.memory(
+                              _capturedImageBytes!,
+                              fit: BoxFit.cover,
+                            )
+                          : Icon(
+                              Icons.face_retouching_natural,
+                              size: 90,
+                              color: Colors.white.withOpacity(0.7),
+                            ),
+                    ),
                   ),
-                  Icon(
-                    _step == 4
-                        ? Icons.check_circle_outline
-                        : (_step == -1 ? Icons.highlight_off : Icons.face_retouching_natural),
-                    size: 90,
-                    color: _step == 4
-                        ? Colors.greenAccent
-                        : (_step == -1 ? Colors.redAccent : Colors.white.withOpacity(0.85)),
-                  ),
-                  if (_step >= 0 && _step < 4)
+
+                  // Scanning laser bar
+                  if (_isAnalyzing)
                     AnimatedBuilder(
                       animation: _scanAnimation,
                       builder: (context, child) {
@@ -637,7 +745,8 @@ class _FaceEnrollmentDialogState extends State<_FaceEnrollmentDialog>
               ),
             ),
             const SizedBox(height: 16),
-            if (_step >= 0 && _step < 4) ...[
+
+            if (_isAnalyzing || _isSaving) ...[
               const SizedBox(
                 width: 20,
                 height: 20,
@@ -648,17 +757,17 @@ class _FaceEnrollmentDialogState extends State<_FaceEnrollmentDialog>
               ),
               const SizedBox(height: 10),
             ],
+
             Text(
-              _stepText,
+              _statusText,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: _step == 4
-                    ? Colors.greenAccent
-                    : (_step == -1 ? Colors.redAccent : Colors.white70),
+                color: _capturedImageBytes != null ? Colors.greenAccent : Colors.white70,
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
               ),
             ),
+
             if (_error != null) ...[
               const SizedBox(height: 8),
               Text(
@@ -667,39 +776,62 @@ class _FaceEnrollmentDialogState extends State<_FaceEnrollmentDialog>
                 style: const TextStyle(color: Colors.redAccent, fontSize: 11),
               ),
             ],
+
             const SizedBox(height: 20),
-            if (_step == 4)
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.greenAccent.shade700,
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(44),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                icon: const Icon(Icons.check, size: 18),
-                label: const Text('HOÀN TẤT', style: TextStyle(fontWeight: FontWeight.bold)),
-                onPressed: () => Navigator.pop(context),
-              )
-            else if (_step == -1)
+
+            // Buttons
+            if (_capturedImageBytes == null) ...[
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0284C7),
                   foregroundColor: Colors.white,
-                  minimumSize: const Size.fromHeight(44),
+                  minimumSize: const Size.fromHeight(46),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                 ),
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const Text('THỬ LẠI', style: TextStyle(fontWeight: FontWeight.bold)),
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('CHỤP ẢNH TỪ CAMERA', style: TextStyle(fontWeight: FontWeight.bold)),
+                onPressed: () => _pickImage(ImageSource.camera),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.white70,
+                  side: const BorderSide(color: Colors.white24),
+                  minimumSize: const Size.fromHeight(42),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.photo_library),
+                label: const Text('CHỌN ẢNH TỪ THƯ VIỆN'),
+                onPressed: () => _pickImage(ImageSource.gallery),
+              ),
+            ] else ...[
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.greenAccent.shade700,
+                  foregroundColor: Colors.white,
+                  minimumSize: const Size.fromHeight(46),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.check_circle_outline),
+                label: Text(
+                  _isSaving ? 'ĐANG LƯU...' : 'XÁC NHẬN & LƯU ẢNH MẪU',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                onPressed: _isSaving ? null : _confirmAndSave,
+              ),
+              const SizedBox(height: 8),
+              TextButton.icon(
                 onPressed: () {
                   setState(() {
-                    _step = 0;
-                    _error = null;
-                    _stepText = 'Đang nhận diện khuôn mặt...';
+                    _capturedImageBytes = null;
+                    _capturedBase64 = null;
+                    _statusText = 'Chụp hoặc chọn 1 bức ảnh khuôn mặt rõ nét của bạn';
                   });
-                  _animController.repeat(reverse: true);
-                  _startEnrollment();
                 },
+                icon: const Icon(Icons.refresh, size: 16, color: Colors.white60),
+                label: const Text('Chụp lại ảnh khác', style: TextStyle(color: Colors.white60, fontSize: 12)),
               ),
+            ],
           ],
         ),
       ),

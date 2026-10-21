@@ -128,7 +128,7 @@ class AuthProvider with ChangeNotifier {
   }
 
   // Biometric Face ID Quick Login
-  Future<bool> faceLogin(String account, {String? faceBiometric}) async {
+  Future<bool> faceLogin(String account, {String? scannedPhoto, String? faceBiometric}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
@@ -136,6 +136,7 @@ class AuthProvider with ChangeNotifier {
     try {
       final res = await ApiService.post('/auth/face-login', {
         'account': account.trim(),
+        'scannedPhoto': scannedPhoto,
         'faceData': faceBiometric ?? 'biometric_verified_true',
       });
 
@@ -162,14 +163,28 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  // Enroll / Register Face Biometrics in Settings
-  Future<bool> enrollFace({String? faceData}) async {
+  // Get enrolled face reference photo for an account before login
+  Future<Map<String, dynamic>?> getFacePhoto(String account) async {
+    try {
+      final res = await ApiService.get('/auth/face-photo?account=${Uri.encodeComponent(account.trim())}');
+      if (res['success'] == true && res['data'] != null) {
+        return res['data'];
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  // Enroll / Register Face Biometrics in Settings (with Photo)
+  Future<bool> enrollFace({String? facePhoto, String? faceData}) async {
     _isLoading = true;
     _errorMessage = null;
     notifyListeners();
 
     try {
       final res = await ApiService.post('/auth/enroll-face', {
+        if (facePhoto != null) 'facePhoto': facePhoto,
         'faceData': faceData ?? 'face_vector_${DateTime.now().millisecondsSinceEpoch}',
       });
 

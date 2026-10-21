@@ -11,6 +11,7 @@ import {
   getMe,
   faceLogin,
   enrollFace,
+  getFaceEnrolledPhoto,
 } from '../controllers/auth.controller';
 import { authenticateJwt } from '../middlewares/auth.middleware';
 
@@ -20,6 +21,7 @@ router.post('/register', register);
 router.post('/verify-email', verifyEmail);
 router.post('/login', login);
 router.post('/face-login', faceLogin);
+router.get('/face-photo', getFaceEnrolledPhoto);
 router.post('/enroll-face', authenticateJwt, enrollFace);
 router.post('/verify-login-otp', verifyLoginOtp);
 router.post('/verify-otp', verifyLoginOtp); // Backwards-compatible alias
