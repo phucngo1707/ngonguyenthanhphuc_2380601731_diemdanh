@@ -190,6 +190,7 @@ export const updateRecordStatusManual = async (req: Request, res: Response): Pro
         method: 'MANUAL',
         modifiedByTeacherId: req.user?.id,
         modifiedReason,
+        modifiedAt: new Date(),
       },
       include: {
         student: { select: { fullName: true, studentCode: true } },

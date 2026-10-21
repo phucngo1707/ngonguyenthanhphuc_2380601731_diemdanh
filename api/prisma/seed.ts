@@ -30,6 +30,7 @@ async function main() {
       fullName: 'Quản trị viên Giáo vụ PRIME',
       role: UserRole.ADMIN,
       phoneNumber: '0901234567',
+      isEmailVerified: true,
       isActive: true,
     },
   });
@@ -43,6 +44,7 @@ async function main() {
       role: UserRole.TEACHER,
       phoneNumber: '0912345678',
       teacherCode: 'GV202601',
+      isEmailVerified: true,
       isActive: true,
     },
   });
@@ -56,6 +58,7 @@ async function main() {
       role: UserRole.STUDENT,
       phoneNumber: '0934567890',
       studentCode: '2380601731',
+      isEmailVerified: true,
       isActive: true,
     },
   });
@@ -69,6 +72,7 @@ async function main() {
       role: UserRole.STUDENT,
       phoneNumber: '0945678901',
       studentCode: '2380601732',
+      isEmailVerified: true,
       isActive: true,
     },
   });

@@ -24,8 +24,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Static uploads serving
 app.use('/uploads', express.static(path.resolve(process.cwd(), config.upload.dir)));
 
-// Main API routes (/api)
-app.use(config.apiPrefix, apiRoutes);
+// Main API routes (/api/v1 and /api)
+app.use('/api/v1', apiRoutes);
+app.use('/api', apiRoutes);
 
 // Root greeting
 app.get('/', (req: Request, res: Response) => {

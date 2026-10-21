@@ -144,4 +144,127 @@ class AuthProvider with ChangeNotifier {
 
     notifyListeners();
   }
+
+  // Register new student account
+  Future<Map<String, dynamic>> register({
+    required String fullName,
+    required String email,
+    required String studentCode,
+    required String password,
+    required String confirmPassword,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final res = await ApiService.post('/auth/register', {
+        'fullName': fullName,
+        'email': email,
+        'studentCode': studentCode,
+        'password': password,
+        'confirmPassword': confirmPassword,
+      });
+
+      _isLoading = false;
+      notifyListeners();
+      if (res['success'] == true) {
+        return res['data'] ?? {};
+      } else {
+        _errorMessage = res['message'] ?? 'Đăng ký thất bại';
+        throw Exception(_errorMessage);
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  // Verify registration email with OTP
+  Future<bool> verifyEmail({required String email, required String otp}) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final res = await ApiService.post('/auth/verify-email', {
+        'email': email,
+        'otp': otp,
+      });
+
+      _isLoading = false;
+      notifyListeners();
+      if (res['success'] == true) {
+        return true;
+      } else {
+        _errorMessage = res['message'] ?? 'Xác thực email thất bại';
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  // Request Forgot Password OTP
+  Future<bool> forgotPassword(String email) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final res = await ApiService.post('/auth/forgot-password', {
+        'email': email,
+      });
+
+      _isLoading = false;
+      notifyListeners();
+      return res['success'] == true;
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      rethrow;
+    }
+  }
+
+  // Reset Password with OTP
+  Future<bool> resetPassword({
+    required String email,
+    required String otp,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final res = await ApiService.post('/auth/reset-password', {
+        'email': email,
+        'otp': otp,
+        'newPassword': newPassword,
+        'confirmPassword': confirmPassword,
+      });
+
+      _isLoading = false;
+      notifyListeners();
+      if (res['success'] == true) {
+        return true;
+      } else {
+        _errorMessage = res['message'] ?? 'Đặt lại mật khẩu thất bại';
+        return false;
+      }
+    } catch (e) {
+      _isLoading = false;
+      _errorMessage = e.toString().replaceAll('Exception: ', '');
+      notifyListeners();
+      rethrow;
+    }
+  }
 }
+

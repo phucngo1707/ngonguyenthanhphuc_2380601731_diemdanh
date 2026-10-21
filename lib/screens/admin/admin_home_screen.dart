@@ -4,7 +4,6 @@ import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../models/class_model.dart';
 import '../../models/user_model.dart';
-import '../login_screen.dart';
 import '../profile/profile_screen.dart';
 
 class AdminHomeScreen extends StatefulWidget {
@@ -230,8 +229,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final auth = Provider.of<AuthProvider>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('GIÁO VỤ / QUẢN TRỊ VIÊN'),

@@ -134,10 +134,31 @@ export const updateClass = async (req: Request, res: Response): Promise<void> =>
 export const deleteClass = async (req: Request, res: Response): Promise<void> => {
   try {
     const { id } = req.params;
+    const existing = await prisma.class.findUnique({
+      where: { id },
+      include: {
+        _count: { select: { sessions: true, leaveRequests: true, enrollments: true } },
+      },
+    });
+
+    if (!existing) {
+      sendError(res, 'Không tìm thấy lớp học phần', 404);
+      return;
+    }
+
+    if (existing._count.sessions > 0 || existing._count.leaveRequests > 0) {
+      await prisma.class.update({
+        where: { id },
+        data: { isArchived: true },
+      });
+      sendSuccess(res, 'Lớp học phần đã có lịch sử hoạt động nên đã được lưu trữ an toàn (Archived)');
+      return;
+    }
+
     await prisma.class.delete({ where: { id } });
     sendSuccess(res, 'Đã xóa lớp học phần thành công');
   } catch (error: any) {
-    sendError(res, 'Không thể xóa lớp đã có sinh viên hoặc phiên điểm danh', 400);
+    sendError(res, 'Lỗi khi xóa hoặc lưu trữ lớp học phần', 400);
   }
 };
 

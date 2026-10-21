@@ -99,6 +99,11 @@ export const createSession = async (req: Request, res: Response): Promise<void> 
       return;
     }
 
+    if (classData.isArchived) {
+      sendError(res, 'Lớp học phần đã được lưu trữ, không thể tạo phiên điểm danh mới', 400);
+      return;
+    }
+
     if (req.user?.role === UserRole.TEACHER && classData.teacherId !== req.user.id) {
       sendError(res, 'Bạn không thể tạo phiên điểm danh cho lớp không phụ trách', 403);
       return;
