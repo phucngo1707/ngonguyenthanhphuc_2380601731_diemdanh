@@ -4,7 +4,7 @@ class ApiConfig {
   // Default to localhost, with option to switch to public URL or custom IP in Settings
   static const String defaultLocalUrl = 'http://10.0.2.2:5000/api'; // Android emulator localhost alias
   static const String defaultWebUrl = 'http://localhost:5000/api';
-  static const String defaultPublicUrl = 'https://ten-jars-accept.loca.lt/api';
+  static const String defaultPublicUrl = 'https://prime-attendance-2380601731.loca.lt/api';
 
   static String baseUrl = defaultPublicUrl;
 

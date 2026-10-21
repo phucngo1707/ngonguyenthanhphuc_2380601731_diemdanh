@@ -176,12 +176,12 @@ flutter run
 
 Hệ thống được thiết lập cổng kết nối bảo mật HTTPS ra Internet để Giảng viên có thể kiểm tra trực tiếp từ bất kỳ máy tính hoặc điện thoại nào:
 
-- **Public API Base URL:** `https://ten-jars-accept.loca.lt/api`
-- **Health Check Endpoint:** [https://ten-jars-accept.loca.lt/api/health](https://ten-jars-accept.loca.lt/api/health)
+- **Public API Base URL:** `https://prime-attendance-2380601731.loca.lt/api`
+- **Health Check Endpoint:** [https://prime-attendance-2380601731.loca.lt/api/health](https://prime-attendance-2380601731.loca.lt/api/health)
 *(Yêu cầu header `Bypass-Tunnel-Reminder: true` khi gọi bằng HTTP client bên ngoài, ứng dụng Flutter đã được tích hợp sẵn header này).*
 
 Trên ứng dụng Flutter, tại màn hình Đăng nhập hoặc Hồ sơ cá nhân đều có nút **"Đổi API Server URL"**, cho phép chuyển đổi linh hoạt tức thì giữa:
-- `Public HTTPS` (`https://ten-jars-accept.loca.lt/api`)
+- `Public HTTPS` (`https://prime-attendance-2380601731.loca.lt/api`)
 - `Localhost:5000` (`http://localhost:5000/api`)
 - `Android Emulator` (`http://10.0.2.2:5000/api`)
 
