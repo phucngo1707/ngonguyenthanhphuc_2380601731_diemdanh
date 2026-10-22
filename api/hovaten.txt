@@ -1,0 +1,104 @@
+================================================================================
+BÁO CÁO NỘP BÀI TẬP / ĐỒ ÁN - HỆ THỐNG ĐIỂM DANH SINH VIÊN THÔNG MINH
+================================================================================
+
+1. THÔNG TIN SINH VIÊN:
+- Họ và tên: Ngô Nguyễn Thanh Phúc
+- Mã số sinh viên (MSSV): 2380601731
+- Tên đồ án / ứng dụng: PRIME Attendance System (Hệ Thống Điểm Danh Sinh Viên Thông Minh)
+
+--------------------------------------------------------------------------------
+2. CÁC ĐƯỜNG LINK NỘP BÀI:
+- Link GitHub chứa Frontend (FLUTTER):
+  https://github.com/phucngo1707/ngonguyenthanhphuc_2380601731_diemdanh
+
+- Link GitHub chứa Backend (Node.js, Express, TypeScript, Prisma, MySQL 8):
+  https://github.com/phucngo1707/ngonguyenthanhphuc_2380601731_backend
+  (Hoặc link trong monorepo: https://github.com/phucngo1707/ngonguyenthanhphuc_2380601731_diemdanh/tree/main/api)
+
+- Link Swagger UI trực tuyến kiểm thử toàn bộ 19 API:
+  https://huge-occupational-astrology-offerings.trycloudflare.com/docs
+
+- Link Health Check API kiểm tra trạng thái máy chủ & Database:
+  https://huge-occupational-astrology-offerings.trycloudflare.com/api/health
+
+--------------------------------------------------------------------------------
+3. TÀI KHOẢN KIỂM THỬ HỆ THỐNG (TEST ACCOUNTS):
+a) Tài khoản Giảng viên:
+   - Email: phucngo1707@gmail.com
+   - Mật khẩu: 12345Aa@
+   - Mã OTP: Gửi trực tiếp mã thật 6 chữ số vào hộp thư Gmail phucngo1707@gmail.com
+
+b) Tài khoản Sinh viên:
+   - Email: student@prime.edu.vn (hoặc đăng nhập bằng MSSV: 2380601731)
+   - Mật khẩu: Student@123
+   - Mã OTP demo: 123456
+
+c) Tài khoản Quản trị viên (Admin):
+   - Email: admin@prime.edu.vn
+   - Mật khẩu: Admin@123
+   - Mã OTP demo: 123456
+
+--------------------------------------------------------------------------------
+4. DANH SÁCH CHI TIẾT CÁC CHỨC NĂNG ĐÃ LÀM ĐƯỢC:
+
+A. XÁC THỰC BẢO MẬT & PHÂN QUYỀN (AUTHENTICATION & RBAC):
+1. Đăng ký tài khoản Sinh viên mới: Có kiểm tra hợp lệ, chống trùng email và mã số sinh viên.
+2. Xác thực kích hoạt tài khoản qua Email bằng mã OTP 6 số gửi qua Gmail SMTP thật.
+3. Đăng nhập 2 bước bảo mật cao:
+   - Bước 1: Nhập email & mật khẩu (mật khẩu băm an toàn chuẩn Argon2id).
+   - Bước 2: Nhập mã OTP 6 số gửi về Email.
+4. Đăng nhập bằng Sinh trắc học thiết bị (Vân tay / Face ID trên điện thoại).
+5. Quên mật khẩu & Đặt lại mật khẩu có gửi mã xác nhận OTP.
+6. Quản lý phiên làm việc bằng JWT Access Token (2h) và Refresh Token (30 ngày).
+7. Phân quyền người dùng theo vai trò nghiêm ngặt (Role-Based Access Control - RBAC):
+   - ADMIN: Quản trị hệ thống, người dùng và toàn bộ các lớp.
+   - TEACHER: Giảng viên quản lý lớp, tạo buổi điểm danh, duyệt đơn nghỉ phép.
+   - STUDENT: Sinh viên tham gia lớp, quét mã QR điểm danh, nộp đơn nghỉ phép.
+
+B. ĐĂNG NHẬP KHUÔN MẶT VÀ ĐỐI CHIẾU ẢNH (FACE RECOGNITION):
+1. Đăng ký khuôn mặt trong trang Hồ sơ / Cài đặt:
+   - Chụp ảnh chân dung trực tiếp bằng camera trước của thiết bị.
+   - Mã hóa và lưu trữ ảnh chuẩn Base64 an toàn trên cơ sở dữ liệu.
+2. Đăng nhập nhanh bằng Khuôn mặt (Face Scan Login):
+   - Mở Camera quét khuôn mặt trực tiếp của sinh viên.
+   - Giao diện đối chiếu song song: Hiển thị ảnh mẫu đã đăng ký bên cạnh ảnh vừa quét từ camera.
+   - Hiệu ứng quét Laser Radar và thanh đo độ tương đồng trực quan (Match Score > 98%).
+   - Tự động hoàn tất đăng nhập sau khi đối chiếu khớp ảnh.
+
+C. QUẢN LÝ LỚP HỌC (CLASS MANAGEMENT):
+1. Giảng viên: Tạo lớp học mới (Mã lớp, tên môn học, học kỳ, phòng học).
+2. Giảng viên: Xem danh sách các lớp đang giảng dạy, sửa thông tin lớp, xóa lớp.
+3. Giảng viên: Thêm sinh viên vào lớp theo MSSV/Email, xóa sinh viên khỏi lớp.
+4. Sinh viên: Tham gia lớp học nhanh chóng bằng Mã tham gia lớp (Join Code).
+5. Sinh viên: Xem danh sách các lớp học mình đã đăng ký.
+
+D. ĐIỂM DANH DYNAMIC QR CHỐNG GIAN LẬN (SMART ANTI-CHEAT ATTENDANCE):
+1. Giảng viên tạo buổi điểm danh: Tùy chỉnh ngày giờ, phòng học, bật/tắt định vị GPS và Wi-Fi.
+2. Mã Dynamic QR chống chụp ảnh:
+   - Mã QR được ký mật mã HMAC-SHA256 kèm timestamp.
+   - Mã tự động làm mới liên tục mỗi 10 giây (10s Window). Chặn hoàn toàn việc chụp màn hình gửi cho bạn ở xa điểm danh hộ.
+3. Chống tấn công phát lại (Anti-Replay Attack): Mỗi mã token QR chỉ dùng điểm danh được duy nhất 1 lần.
+4. Chống điểm danh trùng: Chặn sinh viên điểm danh nhiều lần trong cùng một buổi học.
+5. Kiểm tra vị trí địa lý (GPS Geofencing):
+   - Sinh viên khi quét mã QR sẽ gửi kèm tọa độ GPS thực tế.
+   - Hệ thống tự động tính khoảng cách Haversine, chỉ chấp nhận nếu nằm trong bán kính phòng học (mặc định 50m).
+6. Kiểm tra mạng Wi-Fi phòng học (BSSID): Tùy chọn yêu cầu sinh viên phải kết nối đúng mạng Wi-Fi của giảng đường.
+7. Giảng viên cập nhật thủ công: Giảng viên có quyền sửa đổi trạng thái điểm danh của sinh viên (Có mặt, Đi trễ, Vắng, Nghỉ có phép) kèm ghi chú giải trình.
+
+E. QUẢN LÝ ĐƠN NGHỈ PHÉP (LEAVE REQUESTS):
+1. Sinh viên nộp đơn xin nghỉ phép: Chọn môn học, ngày nghỉ, nhập lý do và đính kèm ảnh minh chứng (giấy khám bệnh, đơn thuốc,...).
+2. Chặn sinh viên gửi trùng lặp nhiều đơn nghỉ phép cho cùng một ngày học.
+3. Giảng viên nhận thông báo và xem danh sách đơn nghỉ kèm ảnh minh chứng đính kèm.
+4. Giảng viên Phê duyệt (Duyệt) hoặc Từ chối đơn nghỉ phép kèm ghi chú phản hồi.
+5. Tự động đồng bộ: Khi đơn nghỉ được duyệt, buổi học tương ứng tự động cập nhật trạng thái của sinh viên thành "Nghỉ có phép" (EXCUSED).
+
+F. BÁO CÁO & LỊCH SỬ ĐIỂM DANH:
+1. Sinh viên xem toàn bộ lịch sử điểm danh của mình, tỷ lệ chuyên cần từng môn.
+2. Giảng viên xem báo cáo tổng hợp buổi học: Số lượng sinh viên có mặt, đi trễ, vắng mặt, có phép.
+
+G. CHẤT LƯỢNG MÃ NGUỒN & KIỂM THỬ TỰ ĐỘNG:
+1. Backend vượt qua 100% kiểm thử tự động: 45/45 Automated Integration Tests PASSED (Jest, Supertest).
+2. Flutter App: Biên dịch chuẩn xác, không có lỗi (0 compile errors).
+3. Tài liệu API: Tích hợp đầy đủ Swagger UI trực quan chuẩn OpenAPI 3.0, hỗ trợ kiểm thử trực tiếp tất cả 19 endpoints trên trình duyệt.
+================================================================
